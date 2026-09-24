@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOÁN MATSUDA AI | Chấm Bài Tự Động</title>
+    
+    <!-- Phông chữ Inter hiện đại -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- CSS chính -->
+    <link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+    <!-- HEADER / MENU -->
+    <header class="header glass-nav">
+        <div class="header-container">
+            <div class="logo">
+                <span class="logo-icon">📐</span>
+                TOÁN <span class="gradient-text">MATSUDA AI</span>
+            </div>
+            <nav class="navbar">
+                <a href="#" class="nav-link active">Trang chủ</a>
+                <a href="#" class="nav-link">Giới thiệu</a>
+                <a href="#" class="nav-link">Tính năng</a>
+                <a href="#" class="nav-link">Liên hệ</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT -->
+    <main>
+        <!-- HERO SECTION -->
+        <section class="hero">
+            <div class="hero-content">
+                <h1 class="hero-title">TOÁN MATSUDA AI</h1>
+                <p class="hero-subtitle">Nền tảng AI hỗ trợ giáo viên và học sinh học Toán.</p>
+            </div>
+        </section>
+
+        <!-- THẺ TÍNH NĂNG -->
+        <section class="features">
+            <div class="features-grid">
+                <div class="feature-card glass-card">
+                    <div class="feature-icon">📷</div>
+                    <h3>Chấm bài bằng AI</h3>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="feature-icon">📚</div>
+                    <h3>Kho đề thông minh</h3>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Phân tích kết quả học tập</h3>
+                </div>
+                <div class="feature-card glass-card">
+                    <div class="feature-icon">🤖</div>
+                    <h3>Gia sư AI</h3>
+                </div>
+            </div>
+        </section>
+
+        <!-- APP WORKSPACE (KHU VỰC CHÍNH CHẤM BÀI) -->
+        <section class="workspace">
+            <div class="workspace-container glass-card">
+                
+                <!-- Khu vực Upload -->
+                <div id="upload-section" class="upload-area">
+                    <div class="upload-box" id="drop-zone">
+                        
+                        <!-- Trạng thái mặc định -->
+                        <div id="upload-default">
+                            <div class="upload-icon">📄</div>
+                            <h3 class="upload-text">Kéo thả ảnh bài làm vào đây</h3>
+                            <input type="file" id="file-input" hidden accept="image/*">
+                            <button class="btn btn-outline mt-3" onclick="document.getElementById('file-input').click()">Chọn tệp</button>
+                        </div>
+                        
+                        <!-- Trạng thái xem trước tệp -->
+                        <div id="upload-preview" class="hidden fade-in">
+                            <h3 style="margin-bottom: 15px; color: var(--text-secondary);">📷 Preview</h3>
+                            
+                            <img id="preview-image" src="" alt="Bản xem trước" class="preview-image hidden">
+                            <div id="preview-pdf" class="upload-icon hidden" style="font-size: 60px;">📄</div>
+                            
+                            <div class="file-info-card slide-up">
+                                <div class="file-detail-row">
+                                    <span class="detail-label">Tên:</span>
+                                    <span id="file-name" class="detail-value">filename.jpg</span>
+                                </div>
+                                <div class="file-detail-row">
+                                    <span class="detail-label">Dung lượng:</span>
+                                    <span id="file-size" class="detail-value">0 MB</span>
+                                </div>
+                                <div class="file-detail-row">
+                                    <span class="detail-label">Định dạng:</span>
+                                    <span id="file-type" class="detail-value">JPG</span>
+                                </div>
+                                <div class="file-detail-row" id="row-dimensions">
+                                    <span class="detail-label" id="dim-label">Kích thước:</span>
+                                    <span id="file-dimensions" class="detail-value">0 × 0</span>
+                                </div>
+                            </div>
+
+                            <div class="preview-actions">
+                                <button id="btn-remove-file" class="btn btn-danger">🗑 Xóa file</button>
+                                <button id="btn-reselect" class="btn btn-secondary">🔄 Chọn lại</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="action-area">
+                        <!-- Nút chấm bài ban đầu bị Disable -->
+                        <button id="btn-grade" class="btn btn-primary btn-large disabled-btn" disabled>
+                            <span class="btn-icon">🤖</span> CHẤM BÀI
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Khu vực Kết quả (Sprint 4 Dynamic AI Render) -->
+                <div id="result-section" class="result-area hidden">
+                    <div class="result-header" style="justify-content: center; margin-bottom: 20px;">
+                        <h2>Kết quả phân tích từ AI</h2>
+                    </div>
+                    
+                    <div class="score-card" style="margin-bottom: 20px;">
+                        <div class="score-wrapper">
+                            <div class="score-circle">
+                                <span class="score-number" id="animated-score">0.0</span>
+                                <span class="score-max">/ 10</span>
+                            </div>
+                            <!-- Thang điểm màu -->
+                            <div class="color-scale-bar" title="Thang điểm màu">
+                                <div id="score-marker" class="color-scale-marker"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Đánh giá chung (Summary) -->
+                    <div style="text-align: center; margin-bottom: 30px; padding: 0 20px;">
+                        <h3 class="gradient-text" style="font-size: 18px; margin-bottom: 8px;">Đánh giá tổng quan</h3>
+                        <p id="result-summary" style="color: var(--text-primary); font-size: 16px; font-weight: 500;">...</p>
+                    </div>
+
+                    <!-- Lưới hiển thị chi tiết (1 cột) -->
+                    <div class="feedback-grid" style="grid-template-columns: 1fr;">
+                        
+                        <!-- Danh sách từng câu -->
+                        <div class="feedback-box">
+                            <h3 class="box-title">📋 Danh sách từng câu</h3>
+                            <div id="questions-list">
+                                <!-- Javascript Inject Danh sách câu hỏi -->
+                            </div>
+                        </div>
+                        
+                    </div>
+
+                    <!-- Nhận xét chung Overall -->
+                    <div class="feedback-grid mt-3" style="grid-template-columns: 1fr;">
+                        <div class="feedback-box">
+                            <h3 class="box-title">📝 Nhận xét chung</h3>
+                            <ul class="feedback-list" id="overall-feedback-list">
+                                <!-- Javascript Inject nhận xét -->
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="text-center" style="margin-top: 40px;">
+                        <button id="btn-reset-main" class="btn btn-primary btn-large">Chấm bài khác</button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="footer">
+        <div class="footer-content">
+            <div class="footer-logo">
+                <span class="logo-icon">📐</span> TOÁN MATSUDA
+            </div>
+            <div class="footer-info">
+                <p>&copy; 2026 Toán Matsuda. All rights reserved.</p>
+                <span class="version-badge">v0.1 MVP</span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL TIẾN TRÌNH AI SPRINT 4 -->
+    <div id="demo-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up">
+            <h2 class="modal-title gradient-text">Quy trình Chấm bài AI</h2>
+            
+            <div class="modal-steps" id="modal-steps">
+                <div class="modal-step-item active" id="step-loading">
+                    <span class="step-icon">⏳</span> <span id="loading-text">Đang tải ảnh...</span>
+                </div>
+            </div>
+
+            <div id="modal-final-msg" class="modal-final-msg hidden fade-in" style="margin-top: 15px;">
+                <!-- Error msg inject here if needed -->
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/main.js"></script>
+</body>
+</html>
