@@ -1,0 +1,7 @@
+{
+  "name": "TOÁN MATSUDA AI | Chấm Bài Tự Động",
+  "description": "Nền tảng AI hỗ trợ giáo viên và học sinh chấm bài Toán tự động từ ảnh chụp.",
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

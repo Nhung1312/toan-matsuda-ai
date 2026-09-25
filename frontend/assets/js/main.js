@@ -220,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
             formData.append('file', file);
 
             // Fetch API gọi tới Backend Gemini
-            const response = await fetch('http://localhost:8000/api/v1/upload', {
+            const response = await fetch('/api/v1/upload', {
                 method: 'POST',
                 body: formData
             });
@@ -243,11 +243,15 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (error) {
             clearInterval(stepInterval);
-            loadingText.innerHTML = `<span style="color: var(--color-danger)">❌ Lỗi kết nối API: ${error.message}</span>`;
-            modalFinalMsg.innerHTML = `<button id="btn-close-modal" class="btn btn-primary mt-4 w-100">Đóng</button>`;
+            loadingText.innerHTML = `<span style="color: var(--color-danger)">❌ ${error.message}</span>`;
+            modalFinalMsg.innerHTML = `<button id="btn-close-modal" class="btn btn-primary mt-4 w-100">Đóng & Thử lại</button>`;
             modalFinalMsg.classList.remove('hidden');
             document.getElementById('btn-close-modal').addEventListener('click', () => {
                 modal.classList.add('hidden');
+                btnGrade.disabled = false;
+                btnGrade.classList.remove('disabled-btn');
+                btnGrade.style.opacity = '1';
+                btnGrade.style.cursor = 'pointer';
             });
         }
     });
