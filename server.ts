@@ -42,13 +42,28 @@ const getGeminiClient = (customKey?: string) => {
   });
 };
 
-const SYSTEM_PROMPT = `Bạn là giáo viên Toán giỏi và tận tâm. Hãy đọc ảnh bài làm và chấm điểm chi tiết.
-Nhiệm vụ của bạn:
-1. Đọc toàn bộ ảnh bài làm Toán của học sinh. Nếu ảnh quá mờ hoặc không có bài toán, hãy giải thích rõ trong feedback.
-2. Xác định từng câu hỏi hoặc bài tập có trong bài và đọc kỹ lời giải của học sinh.
-3. Tự giải từng câu và so sánh đối chiếu từng bước với bài làm của học sinh.
-4. Chấm điểm chi tiết từng câu theo thang điểm 10 cho toàn bài.
-5. Đưa ra nhận xét chung và các lời khuyên thiết thực để học sinh tiến bộ.`;
+const SYSTEM_PROMPT = `Bạn là chuyên gia giáo viên Toán THCS và THPT hàng đầu, tận tâm và chính xác tuyệt đối.
+Khi chấm một bài làm Toán, bạn PHẢI tạo ra 3 lớp thông tin chuẩn hóa:
+
+1. ĐÁP ÁN CHUẨN (AI TỰ GIẢI ĐỘC LẬP TỪ ĐẦU):
+- Trước khi chấm bài của học sinh, bạn PHẢI tự giải bài toán từ đầu.
+- Trình bày lời giải chuẩn hoàn chỉnh gồm: các bước biến đổi, công thức, phép tính, giải thích bằng lời, kết luận đóng khung dạng \\boxed{...}. Không chỉ đưa ra mỗi đáp số.
+
+2. BÀI LÀM CỦA HỌC SINH & TỌA ĐỘ VÙNG VIẾT (BBOX):
+- Đọc bài làm từ ảnh gốc. Giữ nguyên ý nghĩa toán học, phân biệt rõ số mũ, dấu âm, ngoặc, phân số, căn, dấu bằng.
+- Xác định tọa độ chữ viết của từng bước trên ảnh: { x, y, width, height } từ 0 đến 100 theo tỷ lệ phần trăm (%).
+- Nếu không xác định rõ vùng trên ảnh cho bước đó thì để bbox rỗng hoặc null, tuyệt đối KHÔNG tự tạo tọa độ giả.
+- Nếu nét chữ quá mờ không đọc rõ: ghi rõ "Không đọc rõ phần này. Vui lòng kiểm tra ảnh bài làm gốc", không được tự đoán.
+
+3. PHÂN TÍCH ĐỐI CHIẾU TỪNG BƯỚC:
+- Đối chiếu từng bước của học sinh với đáp án chuẩn.
+- KHÔNG SO SÁNH CƠ HỌC TỪNG DÒNG: Học sinh có thể viết khác cách giải mẫu, bỏ qua bước trung gian hợp lệ, hoặc dùng phương pháp khác. Miễn đúng về mặt toán học là đánh giá ĐÚNG (status: "correct").
+- XÁC ĐỊNH LỖI ĐẦU TIÊN (isFirstError: true): Nếu học sinh sai ở bước X và các bước sau sai do kéo theo kết quả sai của bước X, thì đánh dấu các bước sau là "cascading_error" với nhận xét "Sai do kéo theo lỗi ở bước X", không trừ điểm 2 lần độc lập.
+- Nêu rõ nhận xét từng bước và cách sửa bằng công thức toán (correctionLatex).
+
+QUY TẮC BẮT BUỘC VỀ KÝ HIỆU TOÁN HỌC (LATEX):
+- TẤT CẢ biểu thức Toán trong đề bài, đáp án chuẩn, bài làm được OCR, nhận xét, cách sửa, phân tích từng bước PHẢI dùng định dạng LaTeX chuẩn (ví dụ: (a^m)^n = a^{mn}, 3^2 \\times 3^5 = 3^7, (-25)^3, x^2 + 3x + 2, \\frac{a}{b}, \\sqrt{x+1}, x_1, x_2, \\leq, \\geq, \\neq, \\Rightarrow, \\in, \\boxed{...}).
+- TUYỆT ĐỐI KHÔNG dùng plain text thô như "3^2 * 3^4 = 3^6" hay "x2 + 3x + 2".`;
 
 // Upload & Grade API endpoint
 app.post('/api/v1/upload', upload.single('file') as any, async (req: Request, res: Response) => {
@@ -72,7 +87,7 @@ app.post('/api/v1/upload', upload.single('file') as any, async (req: Request, re
     };
 
     const textPart = {
-      text: 'Hãy đọc ảnh bài làm môn Toán đính kèm, phân tích và chấm điểm chi tiết từng câu. Trả về đúng cấu trúc JSON đã định nghĩa với success: true, tổng điểm score (thang 10), summary, danh sách từng câu questions (question, score, max_score, result: "Đúng"|"Sai"|"Chưa hoàn thiện", feedback), và overall_feedback.',
+      text: 'Hãy đọc ảnh bài làm môn Toán đính kèm. Thực hiện quy trình: (1) Tự giải câu hỏi độc lập tạo ĐÁP ÁN CHUẨN với công thức LaTeX; (2) Đọc bài làm học sinh, xác định bbox từng bước nếu có; (3) Phân tích đối chiếu từng bước (đúng/sai/sai kéo theo, lỗi đầu tiên, nhận xét, cách sửa); (4) Cho điểm và nhận xét chung. Trả về đúng cấu trúc JSON đã định nghĩa.',
     };
 
     const responseSchema = {
@@ -80,25 +95,101 @@ app.post('/api/v1/upload', upload.single('file') as any, async (req: Request, re
       properties: {
         success: { type: Type.BOOLEAN },
         score: { type: Type.NUMBER, description: 'Tổng điểm bài làm từ 0.0 đến 10.0' },
+        maxScore: { type: Type.NUMBER, description: 'Điểm tối đa của toàn bài (ví dụ 10)' },
         summary: { type: Type.STRING, description: 'Tóm tắt nhận xét tổng quan bài làm' },
         questions: {
           type: Type.ARRAY,
           items: {
             type: Type.OBJECT,
             properties: {
-              question: { type: Type.STRING, description: 'Số hoặc mã câu hỏi, ví dụ: "1", "2", "3a"' },
+              questionId: { type: Type.STRING, description: 'Tên hoặc số thứ tự câu hỏi (ví dụ: "1", "2a", "Câu 1")' },
+              question: { type: Type.STRING, description: 'Tên hiển thị của câu hỏi' },
+              problemStatementLatex: { type: Type.STRING, description: 'Đề bài toán dạng LaTeX (nếu đọc được)' },
               score: { type: Type.NUMBER, description: 'Điểm câu này đạt được' },
-              max_score: { type: Type.NUMBER, description: 'Điểm tối đa của câu' },
+              maxScore: { type: Type.NUMBER, description: 'Điểm tối đa của câu' },
+              max_score: { type: Type.NUMBER, description: 'Điểm tối đa (dự phòng tương thích)' },
+              status: { type: Type.STRING, description: 'correct | incorrect | partial' },
               result: { type: Type.STRING, description: 'Kết quả: Đúng, Sai, hoặc Chưa hoàn thiện' },
-              feedback: { type: Type.STRING, description: 'Nhận xét chi tiết các bước làm' },
+              feedback: { type: Type.STRING, description: 'Tóm tắt nhận xét nhanh cho câu' },
+              referenceSolution: {
+                type: Type.OBJECT,
+                description: 'Lớp 1: Đáp án chuẩn do AI tự giải độc lập từ đầu',
+                properties: {
+                  steps: {
+                    type: Type.ARRAY,
+                    items: {
+                      type: Type.OBJECT,
+                      properties: {
+                        stepNumber: { type: Type.INTEGER },
+                        solutionLatex: { type: Type.STRING, description: 'Công thức/biến đổi toán học bằng LaTeX' },
+                        explanation: { type: Type.STRING, description: 'Giải thích bước giải bằng tiếng Việt' },
+                      },
+                      required: ['stepNumber', 'solutionLatex', 'explanation'],
+                    },
+                  },
+                  finalAnswerLatex: { type: Type.STRING, description: 'Đáp số cuối cùng, đóng khung dạng \\boxed{...}' },
+                },
+                required: ['steps', 'finalAnswerLatex'],
+              },
+              studentWork: {
+                type: Type.OBJECT,
+                properties: {
+                  originalImage: { type: Type.BOOLEAN },
+                },
+              },
+              analysis: {
+                type: Type.ARRAY,
+                description: 'Lớp 3: Phân tích đối chiếu từng bước',
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    stepNumber: { type: Type.INTEGER },
+                    status: { type: Type.STRING, description: 'correct | incorrect | cascading_error' },
+                    referenceStepLatex: { type: Type.STRING, description: 'Biểu thức đáp án chuẩn tương ứng' },
+                    studentLatex: { type: Type.STRING, description: 'Biểu thức học sinh viết dưới dạng LaTeX' },
+                    bbox: {
+                      type: Type.OBJECT,
+                      description: 'Tọa độ vùng chữ của bước này trên ảnh (0-100%), nếu không rõ để rỗng hoặc null',
+                      properties: {
+                        x: { type: Type.NUMBER },
+                        y: { type: Type.NUMBER },
+                        width: { type: Type.NUMBER },
+                        height: { type: Type.NUMBER },
+                      },
+                    },
+                    comment: { type: Type.STRING, description: 'Nhận xét chi tiết bước này' },
+                    errorType: { type: Type.STRING, description: 'Loại lỗi nếu sai: sign | calculation | formula | logical | None' },
+                    correctionLatex: { type: Type.STRING, description: 'Cách sửa bước này bằng biểu thức LaTeX' },
+                    isFirstError: { type: Type.BOOLEAN, description: 'true nếu đây là bước đầu tiên học sinh bị sai' },
+                  },
+                  required: ['stepNumber', 'status', 'studentLatex', 'comment'],
+                },
+              },
+              generalComment: {
+                type: Type.OBJECT,
+                properties: {
+                  strengths: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Điểm mạnh của học sinh ở câu này' },
+                  mainErrors: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Lỗi chính (đặc biệt là lỗi đầu tiên)' },
+                  knowledgeToReview: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Kiến thức cần củng cố' },
+                },
+                required: ['strengths', 'mainErrors', 'knowledgeToReview'],
+              },
             },
-            required: ['question', 'score', 'max_score', 'result', 'feedback'],
+            required: ['questionId', 'score', 'maxScore', 'status', 'result', 'feedback', 'referenceSolution', 'analysis'],
           },
         },
         overall_feedback: {
           type: Type.ARRAY,
           items: { type: Type.STRING },
-          description: 'Danh sách các lời khuyên và nhận xét chung',
+          description: 'Danh sách các lời khuyên và nhận xét chung toàn bài',
+        },
+        generalComment: {
+          type: Type.OBJECT,
+          properties: {
+            strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
+            mainErrors: { type: Type.ARRAY, items: { type: Type.STRING } },
+            knowledgeToReview: { type: Type.ARRAY, items: { type: Type.STRING } },
+          },
         },
       },
       required: ['success', 'score', 'summary', 'questions', 'overall_feedback'],
@@ -145,6 +236,22 @@ app.post('/api/v1/upload', upload.single('file') as any, async (req: Request, re
     if (result.score !== undefined && result.summary) {
       result.success = true;
     }
+
+    if (Array.isArray(result.questions)) {
+      result.questions.forEach((q: any, idx: number) => {
+        if (!q.questionId) q.questionId = q.question || String(idx + 1);
+        if (!q.question) q.question = q.questionId;
+        if (q.maxScore && !q.max_score) q.max_score = q.maxScore;
+        if (q.max_score && !q.maxScore) q.maxScore = q.max_score;
+        if (!q.result) {
+          q.result = q.status === 'correct' ? 'Đúng' : (q.status === 'incorrect' ? 'Sai' : 'Chưa hoàn thiện');
+        }
+        if (!q.feedback) {
+          q.feedback = q.status === 'correct' ? 'Giải đúng và trình bày tốt.' : 'Có bước giải cần xem lại đối chiếu.';
+        }
+      });
+    }
+
     return res.json(result);
   } catch (error: any) {
     console.error('Error grading image:', error);

@@ -11,6 +11,11 @@
     <!-- Phông chữ Inter hiện đại -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
+    <!-- KaTeX Thư viện render Công thức Toán học -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
     <!-- CSS chính -->
     <link rel="stylesheet" href="assets/css/style.css">
 </head>
@@ -204,6 +209,19 @@
 
             <div id="modal-final-msg" class="modal-final-msg hidden fade-in" style="margin-top: 15px;">
                 <!-- Error msg inject here if needed -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL XEM ẢNH GỐC / THU PHÓNG BÀI LÀM -->
+    <div id="image-lightbox-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up" style="max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h3 class="gradient-text" style="font-size: 18px; margin: 0;">📝 Ảnh bài làm của học sinh</h3>
+                <button id="btn-close-lightbox" class="btn btn-secondary" style="padding: 4px 12px; font-size: 14px;">✕ Đóng</button>
+            </div>
+            <div style="overflow: auto; flex: 1; border-radius: var(--radius-sm); background: #1e293b; padding: 10px; display: flex; justify-content: center; align-items: center;">
+                <img id="lightbox-full-img" src="" alt="Ảnh bài làm gốc" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
             </div>
         </div>
     </div>
