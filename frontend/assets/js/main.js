@@ -465,6 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div class="page-card-info">
                     <span>${page.width} × ${page.height} • ${formatBytes(page.size)}</span>
                     <span class="page-rotate-val">${page.rotation}°</span>
+                    ${page.isCropped ? '<span class="page-cropped-badge" title="Đã khoanh vùng cắt bài làm">✂️ Đã cắt</span>' : ''}
                 </div>
                 <div class="page-filter-group">
                     <span class="page-filter-label">Quét nét:</span>
@@ -474,6 +475,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button type="button" class="btn-page-filter ${page.filterMode === 'bw' ? 'active' : ''}" data-idx="${idx}" data-filter="bw" title="Trắng đen chuẩn Photocopy">⬛ Đ/T</button>
                 </div>
                 <div class="page-card-actions">
+                    <button type="button" class="btn-crop-page" data-idx="${idx}" title="Cắt & Khoanh vùng câu cần chấm (tránh bị chấm lẫn câu khác)">✂️ Khoanh vùng</button>
                     <div class="page-rotate-group">
                         <button type="button" class="btn-rotate btn-rotate-left" data-idx="${idx}" title="Xoay trái 90°">↶ 90°</button>
                         <button type="button" class="btn-rotate btn-rotate-right" data-idx="${idx}" title="Xoay phải 90°">↷ 90°</button>
@@ -579,6 +581,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (uploadedPages[idx]) {
                     window.openLightbox(uploadedPages[idx].displayDataUrl);
                 }
+            });
+        });
+
+        // Crop Page Click
+        pagesListContainer.querySelectorAll('.btn-crop-page').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const idx = parseInt(btn.getAttribute('data-idx'));
+                openImageCropper('page', idx);
             });
         });
 
@@ -6425,6 +6436,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (scratchpadImgName) {
                     scratchpadImgName.innerHTML = `✓ ${escapeHtml(file.name)} (${Math.round(file.size / 1024)} KB)`;
                 }
+                const btnCropScratchpad = document.getElementById('btn-crop-scratchpad');
+                if (btnCropScratchpad) {
+                    btnCropScratchpad.classList.remove('hidden');
+                    btnCropScratchpad.onclick = () => {
+                        openImageCropper('scratchpad');
+                    };
+                }
                 showToast(`Đã nhận ảnh giấy nháp: ${file.name}`, 'info');
             };
             reader.readAsDataURL(file);
@@ -7086,5 +7104,314 @@ document.addEventListener('DOMContentLoaded', () => {
             if (e.target === growthModal) closeGrowthTrackerModal();
         });
     }
+
+    // ========================================================
+    // TÍNH NĂNG CẮT & KHOANH VÙNG BÀI LÀM (INTERACTIVE CROPPER)
+    // ========================================================
+    const cropperModal = document.getElementById('image-cropper-modal');
+    const cropperCanvas = document.getElementById('cropper-canvas');
+    const cropperBox = document.getElementById('cropper-box');
+    const cropperViewport = document.getElementById('cropper-viewport-container');
+    const btnCloseCropperModal = document.getElementById('btn-close-cropper-modal');
+    const btnCancelCrop = document.getElementById('btn-cancel-crop');
+    const btnApplyCrop = document.getElementById('btn-apply-crop');
+    const btnCropRotateLeft = document.getElementById('btn-crop-rotate-left');
+    const btnCropRotateRight = document.getElementById('btn-crop-rotate-right');
+    const btnCropSelectAll = document.getElementById('btn-crop-select-all');
+    const btnCropResetOrig = document.getElementById('btn-crop-reset-orig');
+
+    let cropperTargetType = 'page'; // 'page' | 'scratchpad'
+    let cropperTargetPageIndex = 0;
+    let cropperCurrentRotation = 0;
+    let cropperLoadedImage = null;
+
+    let cropRect = { x: 0, y: 0, w: 100, h: 100 };
+    let isDraggingCropBox = false;
+    let activeCropHandle = null;
+    let dragStartPointer = { x: 0, y: 0 };
+    let dragStartRect = { x: 0, y: 0, w: 0, h: 0 };
+    let cropperDispMetrics = { dispW: 100, dispH: 100, offsetLeft: 0, offsetTop: 0 };
+
+    function openImageCropper(targetType = 'page', pageIdx = 0) {
+        if (!cropperModal || !cropperCanvas || !cropperBox) return;
+
+        cropperTargetType = targetType;
+        cropperTargetPageIndex = pageIdx;
+
+        let srcUrl = '';
+        if (targetType === 'page') {
+            const page = uploadedPages[pageIdx];
+            if (!page) return;
+            if (!page.rawOriginalDataUrl) {
+                page.rawOriginalDataUrl = page.originalDataUrl;
+            }
+            srcUrl = page.displayDataUrl || page.originalDataUrl;
+            cropperCurrentRotation = page.rotation || 0;
+        } else {
+            srcUrl = scratchpadUploadedImageBase64;
+            cropperCurrentRotation = 0;
+        }
+
+        if (!srcUrl) {
+            showToast('⚠️ Không tìm thấy ảnh để cắt khoanh vùng.', 'warning');
+            return;
+        }
+
+        cropperModal.classList.remove('hidden');
+
+        cropperLoadedImage = new Image();
+        cropperLoadedImage.onload = () => {
+            renderCropperCanvas(true);
+        };
+        cropperLoadedImage.src = srcUrl;
+    }
+
+    function closeImageCropper() {
+        if (cropperModal) cropperModal.classList.add('hidden');
+        cropperLoadedImage = null;
+    }
+
+    function renderCropperCanvas(resetBox = false) {
+        if (!cropperLoadedImage || !cropperCanvas || !cropperViewport) return;
+
+        const ctx = cropperCanvas.getContext('2d');
+        const rot = ((cropperCurrentRotation % 360) + 360) % 360;
+        const isSideways = (rot === 90 || rot === 270);
+
+        const natW = cropperLoadedImage.naturalWidth;
+        const natH = cropperLoadedImage.naturalHeight;
+
+        cropperCanvas.width = isSideways ? natH : natW;
+        cropperCanvas.height = isSideways ? natW : natH;
+
+        ctx.save();
+        ctx.translate(cropperCanvas.width / 2, cropperCanvas.height / 2);
+        ctx.rotate((rot * Math.PI) / 180);
+        ctx.drawImage(cropperLoadedImage, -natW / 2, -natH / 2);
+        ctx.restore();
+
+        const containerW = cropperViewport.clientWidth || 600;
+        const containerH = cropperViewport.clientHeight || 400;
+
+        const scale = Math.min((containerW - 32) / cropperCanvas.width, (containerH - 32) / cropperCanvas.height);
+        const dispW = Math.max(80, Math.round(cropperCanvas.width * scale));
+        const dispH = Math.max(80, Math.round(cropperCanvas.height * scale));
+
+        cropperCanvas.style.width = dispW + 'px';
+        cropperCanvas.style.height = dispH + 'px';
+
+        const offsetLeft = Math.round((containerW - dispW) / 2);
+        const offsetTop = Math.round((containerH - dispH) / 2);
+
+        cropperDispMetrics = { dispW, dispH, offsetLeft, offsetTop };
+
+        if (resetBox) {
+            cropRect = {
+                x: Math.round(dispW * 0.05),
+                y: Math.round(dispH * 0.05),
+                w: Math.round(dispW * 0.9),
+                h: Math.round(dispH * 0.9)
+            };
+        } else {
+            cropRect.x = Math.max(0, Math.min(dispW - cropRect.w, cropRect.x));
+            cropRect.y = Math.max(0, Math.min(dispH - cropRect.h, cropRect.y));
+            cropRect.w = Math.min(dispW, cropRect.w);
+            cropRect.h = Math.min(dispH, cropRect.h);
+        }
+
+        updateCropBoxUI();
+    }
+
+    function updateCropBoxUI() {
+        if (!cropperBox) return;
+        cropperBox.style.left = (cropperDispMetrics.offsetLeft + cropRect.x) + 'px';
+        cropperBox.style.top = (cropperDispMetrics.offsetTop + cropRect.y) + 'px';
+        cropperBox.style.width = cropRect.w + 'px';
+        cropperBox.style.height = cropRect.h + 'px';
+    }
+
+    // Dragging & Resizing crop box
+    if (cropperBox) {
+        cropperBox.addEventListener('pointerdown', (e) => {
+            if (e.target.classList.contains('crop-handle')) {
+                activeCropHandle = e.target.getAttribute('data-handle');
+                isDraggingCropBox = false;
+            } else {
+                isDraggingCropBox = true;
+                activeCropHandle = null;
+            }
+            dragStartPointer = { x: e.clientX, y: e.clientY };
+            dragStartRect = { ...cropRect };
+            e.preventDefault();
+        });
+    }
+
+    window.addEventListener('pointermove', (e) => {
+        if (!isDraggingCropBox && !activeCropHandle) return;
+
+        const dx = e.clientX - dragStartPointer.x;
+        const dy = e.clientY - dragStartPointer.y;
+        const { dispW, dispH } = cropperDispMetrics;
+        const minSize = 35;
+
+        if (isDraggingCropBox) {
+            let nextX = dragStartRect.x + dx;
+            let nextY = dragStartRect.y + dy;
+            nextX = Math.max(0, Math.min(dispW - cropRect.w, nextX));
+            nextY = Math.max(0, Math.min(dispH - cropRect.h, nextY));
+            cropRect.x = nextX;
+            cropRect.y = nextY;
+        } else if (activeCropHandle) {
+            let { x, y, w, h } = dragStartRect;
+
+            if (activeCropHandle.includes('e')) {
+                w = Math.max(minSize, Math.min(dispW - x, dragStartRect.w + dx));
+            }
+            if (activeCropHandle.includes('s')) {
+                h = Math.max(minSize, Math.min(dispH - y, dragStartRect.h + dy));
+            }
+            if (activeCropHandle.includes('w')) {
+                const maxDx = dragStartRect.w - minSize;
+                const appliedDx = Math.max(-dragStartRect.x, Math.min(maxDx, dx));
+                x = dragStartRect.x + appliedDx;
+                w = dragStartRect.w - appliedDx;
+            }
+            if (activeCropHandle.includes('n')) {
+                const maxDy = dragStartRect.h - minSize;
+                const appliedDy = Math.max(-dragStartRect.y, Math.min(maxDy, dy));
+                y = dragStartRect.y + appliedDy;
+                h = dragStartRect.h - appliedDy;
+            }
+
+            cropRect = { x, y, w, h };
+        }
+
+        updateCropBoxUI();
+    });
+
+    window.addEventListener('pointerup', () => {
+        isDraggingCropBox = false;
+        activeCropHandle = null;
+    });
+
+    // Rotate inside cropper
+    if (btnCropRotateLeft) {
+        btnCropRotateLeft.addEventListener('click', () => {
+            cropperCurrentRotation = ((cropperCurrentRotation - 90) % 360 + 360) % 360;
+            renderCropperCanvas(true);
+        });
+    }
+    if (btnCropRotateRight) {
+        btnCropRotateRight.addEventListener('click', () => {
+            cropperCurrentRotation = (cropperCurrentRotation + 90) % 360;
+            renderCropperCanvas(true);
+        });
+    }
+
+    // Select full image
+    if (btnCropSelectAll) {
+        btnCropSelectAll.addEventListener('click', () => {
+            const { dispW, dispH } = cropperDispMetrics;
+            cropRect = { x: 0, y: 0, w: dispW, dispH };
+            updateCropBoxUI();
+        });
+    }
+
+    // Reset to raw original
+    if (btnCropResetOrig) {
+        btnCropResetOrig.addEventListener('click', () => {
+            if (cropperTargetType === 'page') {
+                const page = uploadedPages[cropperTargetPageIndex];
+                if (page && page.rawOriginalDataUrl) {
+                    page.displayDataUrl = page.rawOriginalDataUrl;
+                    page.isCropped = false;
+                    page.rotation = 0;
+                    cropperCurrentRotation = 0;
+                    cropperLoadedImage = new Image();
+                    cropperLoadedImage.onload = () => renderCropperCanvas(true);
+                    cropperLoadedImage.src = page.rawOriginalDataUrl;
+                    showToast('Đã khôi phục lại ảnh chụp ban đầu.', 'info');
+                }
+            } else {
+                showToast('Đã đặt lại vùng chọn.', 'info');
+                renderCropperCanvas(true);
+            }
+        });
+    }
+
+    // Apply crop
+    if (btnApplyCrop) {
+        btnApplyCrop.addEventListener('click', () => {
+            if (!cropperCanvas) return;
+
+            const { dispW, dispH } = cropperDispMetrics;
+            const scaleX = cropperCanvas.width / dispW;
+            const scaleY = cropperCanvas.height / dispH;
+
+            const sx = Math.max(0, Math.round(cropRect.x * scaleX));
+            const sy = Math.max(0, Math.round(cropRect.y * scaleY));
+            const sw = Math.min(cropperCanvas.width - sx, Math.round(cropRect.w * scaleX));
+            const sh = Math.min(cropperCanvas.height - sy, Math.round(cropRect.h * scaleY));
+
+            if (sw <= 10 || sh <= 10) {
+                showToast('⚠️ Vùng chọn quá nhỏ, vui lòng kéo rộng hơn.', 'warning');
+                return;
+            }
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = sw;
+            tempCanvas.height = sh;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(cropperCanvas, sx, sy, sw, sh, 0, 0, sw, sh);
+
+            const croppedDataUrl = tempCanvas.toDataURL('image/jpeg', 0.92);
+
+            if (cropperTargetType === 'page') {
+                const page = uploadedPages[cropperTargetPageIndex];
+                if (page) {
+                    page.displayDataUrl = croppedDataUrl;
+                    page.originalDataUrl = croppedDataUrl;
+                    page.isCropped = true;
+                    page.width = sw;
+                    page.height = sh;
+                    page.rotation = 0; // Rotated canvas was baked into cropped result
+                    page.optimizedBlob = null; // Re-optimize for grading
+                    renderUploadedPagesList();
+                    showToast(`✂️ Đã khoanh vùng câu cần chấm cho Trang ${cropperTargetPageIndex + 1}! AI sẽ chỉ tập trung chấm phần này.`, 'success');
+                }
+            } else {
+                scratchpadUploadedImageBase64 = croppedDataUrl;
+                const scratchName = document.getElementById('scratchpad-img-name');
+                if (scratchName) scratchName.innerHTML = '✓ Đã khoanh vùng ảnh nháp';
+                showToast('✂️ Đã khoanh vùng phần bài làm nháp thành công!', 'success');
+            }
+
+            closeImageCropper();
+        });
+    }
+
+    if (btnCloseCropperModal) btnCloseCropperModal.addEventListener('click', closeImageCropper);
+    if (btnCancelCrop) btnCancelCrop.addEventListener('click', closeImageCropper);
+    if (cropperModal) {
+        cropperModal.addEventListener('click', (e) => {
+            if (e.target === cropperModal) closeImageCropper();
+        });
+    }
+
+    // Window resize -> adjust cropper
+    window.addEventListener('resize', () => {
+        if (cropperModal && !cropperModal.classList.contains('hidden') && cropperLoadedImage) {
+            renderCropperCanvas(false);
+        }
+    });
+
+    // Close on Escape key
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (cropperModal && !cropperModal.classList.contains('hidden')) {
+                closeImageCropper();
+            }
+        }
+    });
 });
 

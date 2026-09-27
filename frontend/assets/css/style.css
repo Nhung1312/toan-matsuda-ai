@@ -2718,6 +2718,184 @@ kbd {
     margin-top: 14px;
 }
 
+/* ========================================================
+   MODAL CẮT / KHOANH VÙNG BÀI LÀM (IMAGE CROPPER)
+   ======================================================== */
+.btn-crop-page {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #86efac;
+    padding: 3px 8px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.15s ease;
+}
+.btn-crop-page:hover {
+    background: #dcfce7;
+    color: #15803d;
+    border-color: #22c55e;
+    transform: translateY(-1px);
+}
+
+.page-cropped-badge {
+    background: #dcfce7;
+    color: #166534;
+    font-size: 9.5px;
+    font-weight: 800;
+    padding: 1px 5px;
+    border-radius: 4px;
+    border: 1px solid #86efac;
+    margin-left: 4px;
+    text-transform: uppercase;
+}
+
+.cropper-modal-box {
+    max-width: 820px;
+    width: 95%;
+    max-height: 94vh;
+    display: flex;
+    flex-direction: column;
+    padding: 18px 22px;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 25px 60px rgba(15, 23, 42, 0.25);
+    text-align: left;
+}
+
+.cropper-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 10px;
+    margin-bottom: 10px;
+}
+
+.cropper-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+.cropper-toolbar-left, .cropper-toolbar-right {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.cropper-viewport-container {
+    position: relative;
+    width: 100%;
+    height: 58vh;
+    min-height: 320px;
+    background: #0f172a;
+    border-radius: 10px;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+    touch-action: none;
+}
+
+#cropper-canvas {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    display: block;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.cropper-selection-box {
+    position: absolute;
+    box-sizing: border-box;
+    border: 2px dashed #3b82f6;
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.65);
+    cursor: move;
+    touch-action: none;
+    z-index: 10;
+}
+
+.cropper-guide-grid {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+}
+.cropper-guide-grid::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-left: 1px dashed rgba(255, 255, 255, 0.35);
+    border-right: 1px dashed rgba(255, 255, 255, 0.35);
+    left: 33.33%;
+    right: 33.33%;
+}
+.cropper-guide-grid::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-top: 1px dashed rgba(255, 255, 255, 0.35);
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.35);
+    top: 33.33%;
+    bottom: 33.33%;
+}
+
+.crop-handle {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    background: #ffffff;
+    border: 2.5px solid #2563eb;
+    border-radius: 3px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    z-index: 20;
+    touch-action: none;
+}
+
+.crop-handle.handle-nw { top: -7px; left: -7px; cursor: nwse-resize; }
+.crop-handle.handle-ne { top: -7px; right: -7px; cursor: nesw-resize; }
+.crop-handle.handle-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+.crop-handle.handle-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.crop-handle.handle-n  { top: -7px; left: calc(50% - 7px); cursor: ns-resize; }
+.crop-handle.handle-s  { bottom: -7px; left: calc(50% - 7px); cursor: ns-resize; }
+.crop-handle.handle-w  { top: calc(50% - 7px); left: -7px; cursor: ew-resize; }
+.crop-handle.handle-e  { top: calc(50% - 7px); right: -7px; cursor: ew-resize; }
+
+.cropper-modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
+    margin-top: 12px;
+}
+
+.cropper-tip-text {
+    font-size: 11.5px;
+    color: #475569;
+    font-weight: 500;
+}
+
+@media (max-width: 640px) {
+    .cropper-viewport-container {
+        height: 48vh;
+    }
+    .cropper-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 @media (max-width: 640px) {
     .growth-stats-grid {
         grid-template-columns: repeat(2, 1fr);
