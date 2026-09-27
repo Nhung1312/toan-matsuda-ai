@@ -2901,8 +2901,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // SCHOOL & TEACHER BRANDING SUITE (TÊN TRƯỜNG & THẦY CÔ)
     // ========================================================
     const DEFAULT_BRANDING = {
-        schoolName: 'Trường THCS Giảng Võ - Ba Đình, Hà Nội',
-        teacherName: 'Thầy Trần Matsuda',
+        schoolName: 'Trường THCS LC',
+        teacherName: 'Gv phụ trách 0775172026',
         department: 'Tổ Toán - Tin học',
         academicYear: 'Năm học 2025 - 2026',
         slogan: 'Tư duy logic • Vững bước tương lai',
@@ -2913,7 +2913,15 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const raw = localStorage.getItem('MATSUDA_SCHOOL_BRANDING');
             if (raw) {
-                return { ...DEFAULT_BRANDING, ...JSON.parse(raw) };
+                const parsed = JSON.parse(raw);
+                // Tự động nâng cấp nếu còn lưu giá trị mặc định cũ (Giảng Võ / Thầy Trần Matsuda)
+                if (!parsed.schoolName || parsed.schoolName.includes('Giảng Võ')) {
+                    parsed.schoolName = DEFAULT_BRANDING.schoolName;
+                }
+                if (!parsed.teacherName || parsed.teacherName.includes('Trần Matsuda')) {
+                    parsed.teacherName = DEFAULT_BRANDING.teacherName;
+                }
+                return { ...DEFAULT_BRANDING, ...parsed };
             }
         } catch (_) {}
         return { ...DEFAULT_BRANDING };
@@ -3210,100 +3218,104 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
 
+        const teacherDisplay = (branding.teacherName || '').toLowerCase().startsWith('gv') || (branding.teacherName || '').toLowerCase().startsWith('giáo viên')
+            ? `<strong>${escapeHtml(branding.teacherName)}</strong>`
+            : `GV phụ trách: <strong>${escapeHtml(branding.teacherName)}</strong>`;
+
         let html = `
             <!-- TIÊU ĐỀ TRƯỜNG HỌC & QUỐC HIỆU CHÍNH THỨC -->
-            <div class="page-break-avoid" style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #1e3a8a; padding-bottom: 8px; margin-bottom: 12px; break-inside: avoid; page-break-inside: avoid;">
+            <div class="ps-header-block" style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 1.5px solid #1e3a8a; padding-bottom: 4px; margin-bottom: 6px;">
                 <div style="text-align: left;">
-                    <div style="font-size: 11.5px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(branding.schoolName)}</div>
-                    <div style="font-size: 11px; color: #475569; font-weight: 700;">${escapeHtml(branding.department)}</div>
-                    <div style="font-size: 10px; color: #64748b; margin-top: 1px;">GV phụ trách: <strong>${escapeHtml(branding.teacherName)}</strong> • ${escapeHtml(branding.academicYear)}</div>
+                    <div style="font-size: 11.5px; font-weight: 800; color: #1e3a8a; text-transform: uppercase; letter-spacing: 0.4px;">${escapeHtml(branding.schoolName)}</div>
+                    <div style="font-size: 10.5px; color: #475569; font-weight: 700;">${escapeHtml(branding.department)}</div>
+                    <div style="font-size: 9.5px; color: #64748b; margin-top: 1px;">${teacherDisplay} • ${escapeHtml(branding.academicYear)}</div>
                 </div>
                 <div style="text-align: right;">
-                    <div style="font-size: 11px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
-                    <div style="font-size: 10.5px; font-weight: 700; color: #334155;">Độc lập - Tự do - Hạnh phúc</div>
-                    <div style="font-size: 10px; font-style: italic; color: #64748b; margin-top: 2px;">"${escapeHtml(branding.slogan)}"</div>
+                    <div style="font-size: 10.5px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: 0.4px;">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</div>
+                    <div style="font-size: 10px; font-weight: 700; color: #334155;">Độc lập - Tự do - Hạnh phúc</div>
+                    <div style="font-size: 9.5px; font-style: italic; color: #64748b; margin-top: 1px;">"${escapeHtml(branding.slogan)}"</div>
                 </div>
             </div>
 
-            <!-- EXECUTIVE BANNER HEADER -->
-            <div class="page-break-avoid" style="position: relative; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 16px 22px; border-radius: 8px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; break-inside: avoid; page-break-inside: avoid;">
+            <!-- EXECUTIVE BANNER HEADER (COMPACT) -->
+            <div class="ps-header-block" style="position: relative; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 8px 14px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
                 <div>
-                    <div style="font-size: 10.5px; text-transform: uppercase; letter-spacing: 1.5px; opacity: 0.9; margin-bottom: 2px;">📐 TOÁN MATSUDA AI • HỆ THỐNG ĐÁNH GIÁ SƯ PHẠM THCS</div>
-                    <div style="font-size: 19px; font-weight: 800; letter-spacing: 0.3px;">PHIẾU BÁO ĐIỂM & ĐÁNH GIÁ NĂNG LỰC TOÁN HỌC</div>
-                    <div style="font-size: 11px; opacity: 0.92; margin-top: 2px;">Phân tích sư phạm chuyên sâu • Nhận diện lỗi gốc & Hướng dẫn sửa từng bước</div>
+                    <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.9; margin-bottom: 1px;">📐 TOÁN MATSUDA AI • HỆ THỐNG ĐÁNH GIÁ SƯ PHẠM THCS</div>
+                    <div style="font-size: 15px; font-weight: 800; letter-spacing: 0.3px; line-height: 1.2;">PHIẾU BÁO ĐIỂM & ĐÁNH GIÁ NĂNG LỰC TOÁN HỌC</div>
+                    <div style="font-size: 10px; opacity: 0.92; margin-top: 1px;">Phân tích sư phạm chuyên sâu • Nhận diện lỗi gốc & Hướng dẫn sửa từng bước</div>
                 </div>
-                <div style="text-align: right; background: rgba(255,255,255,0.18); padding: 8px 16px; border-radius: 6px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3);">
-                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;">Xếp loại</div>
-                    <div style="font-size: 14px; font-weight: 800;">${scoreTier.badge}</div>
+                <div style="text-align: right; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 5px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); min-width: 90px;">
+                    <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;">Xếp loại</div>
+                    <div style="font-size: 12.5px; font-weight: 800;">${scoreTier.badge}</div>
                 </div>
             </div>
 
             ${data.isTeacherEdited ? `
-                <div class="page-break-avoid" style="background: #fef3c7; border: 1.5px solid #f59e0b; color: #92400e; padding: 8px 14px; border-radius: 6px; font-weight: 700; margin-bottom: 14px; font-size: 12px; display: flex; align-items: center; gap: 8px; break-inside: avoid;">
+                <div style="background: #fef3c7; border: 1px solid #f59e0b; color: #92400e; padding: 4px 10px; border-radius: 4px; font-weight: 700; margin-bottom: 6px; font-size: 11px; display: flex; align-items: center; gap: 6px;">
                     <span>✏️ <strong>KẾT QUẢ ĐÃ ĐƯỢC GIÁO VIÊN ĐỐI CHIẾU & CẬP NHẬT THỦ CÔNG</strong></span>
                 </div>
             ` : ''}
 
             <!-- DẤU MỘC ĐỎ KIỂM DUYỆT SƯ PHẠM (NẾU BẬT) -->
             ${branding.showStamp ? `
-                <div style="position: absolute; right: 26px; top: 120px; width: 95px; height: 95px; border: 2.5px dashed #dc2626; border-radius: 50%; color: #dc2626; transform: rotate(-10deg); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; opacity: 0.85; font-weight: 800; line-height: 1.1; padding: 4px; z-index: 5;">
-                    <span style="font-size: 7.5px; text-transform: uppercase; letter-spacing: 0.5px;">TOÁN SƯ PHẠM</span>
-                    <span style="font-size: 10.5px; margin: 1px 0; font-weight: 900;">★ ĐÃ KIỂM TRA ★</span>
-                    <span style="font-size: 7.5px; font-weight: 700;">ĐIỂM CHUẨN XÁC</span>
+                <div style="position: absolute; right: 18px; top: 68px; width: 70px; height: 70px; border: 2px dashed #dc2626; border-radius: 50%; color: #dc2626; transform: rotate(-10deg); display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; pointer-events: none; opacity: 0.85; font-weight: 800; line-height: 1.05; padding: 2px; z-index: 5;">
+                    <span style="font-size: 6px; text-transform: uppercase; letter-spacing: 0.5px;">TOÁN SƯ PHẠM</span>
+                    <span style="font-size: 8.5px; margin: 1px 0; font-weight: 900;">★ ĐÃ KIỂM TRA ★</span>
+                    <span style="font-size: 6px; font-weight: 700;">ĐIỂM CHUẨN XÁC</span>
                 </div>
             ` : ''}
 
-            <!-- STUDENT INFO & SCORE OVERVIEW DASHBOARD -->
-            <div class="page-break-avoid" style="display: grid; grid-template-columns: 1fr 200px; gap: 14px; margin-bottom: 16px; break-inside: avoid; page-break-inside: avoid;">
-                <table style="width: 100%; border-collapse: collapse; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
+            <!-- STUDENT INFO & SCORE OVERVIEW DASHBOARD (COMPACT) -->
+            <div style="display: grid; grid-template-columns: 1fr 160px; gap: 8px; margin-bottom: 6px;">
+                <table style="width: 100%; border-collapse: collapse; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; overflow: hidden;">
                     <tr>
-                        <td style="padding: 8px 12px; font-size: 12px; border: 1px solid #e2e8f0; width: 50%;">
-                            <span style="color: #64748b; font-size: 11px; display: block;">HỌC SINH:</span>
-                            <strong style="color: #1e293b; font-size: 13.5px;">${escapeHtml(studentName)}</strong>
+                        <td style="padding: 4px 8px; font-size: 11px; border: 1px solid #e2e8f0; width: 50%;">
+                            <span style="color: #64748b; font-size: 9.5px; display: block; line-height: 1.1;">HỌC SINH:</span>
+                            <strong style="color: #1e293b; font-size: 12.5px;">${escapeHtml(studentName)}</strong>
                         </td>
-                        <td style="padding: 8px 12px; font-size: 12px; border: 1px solid #e2e8f0; width: 50%;">
-                            <span style="color: #64748b; font-size: 11px; display: block;">LỚP:</span>
-                            <strong style="color: #1e293b; font-size: 13.5px;">${escapeHtml(studentClass)}</strong>
+                        <td style="padding: 4px 8px; font-size: 11px; border: 1px solid #e2e8f0; width: 50%;">
+                            <span style="color: #64748b; font-size: 9.5px; display: block; line-height: 1.1;">LỚP:</span>
+                            <strong style="color: #1e293b; font-size: 12.5px;">${escapeHtml(studentClass)}</strong>
                         </td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 12px; font-size: 12px; border: 1px solid #e2e8f0;">
-                            <span style="color: #64748b; font-size: 11px; display: block;">BÀI KIỂM TRA:</span>
-                            <strong style="color: #1e293b; font-size: 13px;">${escapeHtml(lessonTitle)}</strong>
+                        <td style="padding: 4px 8px; font-size: 11px; border: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-size: 9.5px; display: block; line-height: 1.1;">BÀI KIỂM TRA:</span>
+                            <strong style="color: #1e293b; font-size: 11.5px;">${escapeHtml(lessonTitle)}</strong>
                         </td>
-                        <td style="padding: 8px 12px; font-size: 12px; border: 1px solid #e2e8f0;">
-                            <span style="color: #64748b; font-size: 11px; display: block;">NGÀY CHẤM:</span>
-                            <strong style="color: #1e293b; font-size: 13px;">${escapeHtml(gradingDate)}</strong>
+                        <td style="padding: 4px 8px; font-size: 11px; border: 1px solid #e2e8f0;">
+                            <span style="color: #64748b; font-size: 9.5px; display: block; line-height: 1.1;">NGÀY CHẤM:</span>
+                            <strong style="color: #1e293b; font-size: 11.5px;">${escapeHtml(gradingDate)}</strong>
                         </td>
                     </tr>
                 </table>
 
-                <div style="background: ${scoreTier.bg}; border: 2px solid ${scoreTier.border}; border-radius: 6px; padding: 10px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-                    <span style="font-size: 11px; font-weight: 700; color: ${scoreTier.color}; text-transform: uppercase; letter-spacing: 0.5px;">Điểm tổng kết</span>
-                    <div style="font-size: 32px; font-weight: 800; color: ${scoreTier.color}; line-height: 1.1; margin: 2px 0;">
-                        ${finalScore.toFixed(1)}<span style="font-size: 16px; font-weight: 600; color: #64748b;"> / 10</span>
+                <div style="background: ${scoreTier.bg}; border: 1.5px solid ${scoreTier.border}; border-radius: 5px; padding: 4px 6px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
+                    <span style="font-size: 9.5px; font-weight: 700; color: ${scoreTier.color}; text-transform: uppercase; letter-spacing: 0.5px; line-height: 1;">Điểm tổng kết</span>
+                    <div style="font-size: 22px; font-weight: 800; color: ${scoreTier.color}; line-height: 1.1; margin: 1px 0;">
+                        ${finalScore.toFixed(1)}<span style="font-size: 13px; font-weight: 600; color: #64748b;"> / 10</span>
                     </div>
-                    <span style="background: #ffffff; color: ${scoreTier.color}; border: 1px solid ${scoreTier.border}; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 12px; margin-top: 2px;">
+                    <span style="background: #ffffff; color: ${scoreTier.color}; border: 1px solid ${scoreTier.border}; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 10px;">
                         ${scoreTier.badge}
                     </span>
                 </div>
             </div>
 
-            <!-- TEACHER / AI SUMMARY CALLOUT -->
+            <!-- TEACHER / AI SUMMARY CALLOUT (COMPACT) -->
             ${exportOptions.totalScore && data.summary ? `
-                <div class="page-break-avoid" style="background: #eff6ff; border-left: 4px solid #2563eb; border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 12px; break-inside: avoid; page-break-inside: avoid;">
-                    <div style="font-size: 12px; font-weight: 700; color: #1e40af; margin-bottom: 4px; display: flex; align-items: center; gap: 6px;">
+                <div style="background: #eff6ff; border-left: 3px solid #2563eb; border-radius: 0 5px 5px 0; padding: 5px 10px; margin-bottom: 6px;">
+                    <div style="font-size: 11px; font-weight: 700; color: #1e40af; margin-bottom: 2px; display: flex; align-items: center; gap: 5px;">
                         <span>👨‍🏫 LỜI PHÊ & NHẬN XÉT SƯ PHẠM TỔNG QUAN:</span>
                     </div>
-                    <div style="font-size: 13px; color: #1e293b; line-height: 1.5; font-style: italic;">
+                    <div style="font-size: 11.5px; color: #1e293b; line-height: 1.35; font-style: italic;">
                         "${formatMathText(data.summary)}"
                     </div>
                 </div>
             ` : ''}
 
-            <!-- MA TRẬN MỨC ĐỘ NĂNG LỰC THEO THÔNG TƯ 22 BỘ GD&ĐT -->
-            <div class="page-break-avoid" style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 14px; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; font-size: 11.5px; color: #334155; break-inside: avoid; page-break-inside: avoid;">
-                <strong style="color: #1e3a8a; display: flex; align-items: center; gap: 5px;">🎯 Ma trận đề (Thông tư 22):</strong>
+            <!-- MA TRẬN MỨC ĐỘ NĂNG LỰC THEO THÔNG TƯ 22 BỘ GD&ĐT (COMPACT) -->
+            <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 5px; padding: 4px 10px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; font-size: 10.5px; color: #334155;">
+                <strong style="color: #1e3a8a; display: flex; align-items: center; gap: 4px;">🎯 Ma trận đề (Thông tư 22):</strong>
                 <span>🟢 Nhận biết: <strong>${cntNb}</strong> câu</span>
                 <span>🔵 Thông hiểu: <strong>${cntTh}</strong> câu</span>
                 <span>🟠 Vận dụng: <strong>${cntVd}</strong> câu</span>
@@ -3321,22 +3333,22 @@ document.addEventListener('DOMContentLoaded', () => {
                 const isCorrect = q.status === 'correct';
                 const lvlInfo = getQuestionLevel(q);
 
-                let psClassStr = `<span style="background: ${lvlInfo.bg}; color: ${lvlInfo.color}; border: 1px solid ${lvlInfo.border}; font-size: 10.5px; font-weight: 700; padding: 1.5px 6px; border-radius: 4px; margin-left: 6px;">${lvlInfo.label}</span>`;
+                let psClassStr = `<span style="background: ${lvlInfo.bg}; color: ${lvlInfo.color}; border: 1px solid ${lvlInfo.border}; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 5px;">${lvlInfo.label}</span>`;
                 if (q.classification) {
                     const parts = [q.classification.grade, q.classification.topic, q.classification.subtopic].filter(Boolean);
-                    if (parts.length > 0) psClassStr += `<span style="font-size: 11px; color: #64748b; font-weight: 500; margin-left: 6px;">[${parts.map(escapeHtml).join(' • ')}]</span>`;
+                    if (parts.length > 0) psClassStr += `<span style="font-size: 10.5px; color: #64748b; font-weight: 500; margin-left: 5px;">[${parts.map(escapeHtml).join(' • ')}]</span>`;
                 }
 
                 html += `
-                    <div class="page-break-avoid ps-question-item" style="border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; margin-bottom: 16px; page-break-inside: avoid; break-inside: avoid; background: #ffffff;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 12px;">
+                    <div class="ps-question-item" style="border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; background: #ffffff;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 6px;">
                             <div>
-                                <span style="font-size: 15px; font-weight: 800; color: #1e293b;">CÂU ${qId}</span>
+                                <span style="font-size: 13.5px; font-weight: 800; color: #1e293b;">CÂU ${qId}</span>
                                 ${psClassStr}
                             </div>
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                ${exportOptions.questionScores ? `<span style="font-size: 14px; font-weight: 800; color: #2563eb;">${score}/${maxScore} điểm</span>` : ''} 
-                                <span style="background: ${isCorrect ? '#dcfce7' : '#fee2e2'}; color: ${isCorrect ? '#15803d' : '#b91c1c'}; border: 1px solid ${isCorrect ? '#bbf7d0' : '#fecaca'}; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 6px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                ${exportOptions.questionScores ? `<span style="font-size: 12.5px; font-weight: 800; color: #2563eb;">${score}/${maxScore} điểm</span>` : ''} 
+                                <span style="background: ${isCorrect ? '#dcfce7' : '#fee2e2'}; color: ${isCorrect ? '#15803d' : '#b91c1c'}; border: 1px solid ${isCorrect ? '#bbf7d0' : '#fecaca'}; font-size: 11px; font-weight: 700; padding: 2px 6px; border-radius: 4px;">
                                     ${isCorrect ? '✅' : '❌'} ${resultText}
                                 </span>
                             </div>
@@ -3346,28 +3358,28 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Reference solution if selected
                 if (exportOptions.referenceSolution && q.referenceSolution) {
                     html += `
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #2563eb; border-radius: 0 6px 6px 0; padding: 10px 12px; margin-bottom: 12px;">
-                            <strong style="color: #2563eb; font-size: 12px; text-transform: uppercase;">📘 Đáp án chuẩn AI tự giải:</strong>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-left: 3px solid #2563eb; border-radius: 0 5px 5px 0; padding: 6px 8px; margin-bottom: 6px;">
+                            <strong style="color: #2563eb; font-size: 11px; text-transform: uppercase;">📘 Đáp án chuẩn AI tự giải:</strong>
                     `;
                     if (q.referenceSolution.domainConditionLatex) {
-                        html += `<div style="font-size: 11px; margin-top: 3px;"><strong>ĐKXĐ:</strong> ${renderLatexToHtml(q.referenceSolution.domainConditionLatex, false)}</div>`;
+                        html += `<div style="font-size: 10.5px; margin-top: 2px;"><strong>ĐKXĐ:</strong> ${renderLatexToHtml(q.referenceSolution.domainConditionLatex, false)}</div>`;
                     }
                     if (q.referenceSolution.variableDeclaration) {
-                        html += `<div style="font-size: 11px; margin-top: 3px;"><strong>Gọi ẩn & ĐK:</strong> ${formatMathText(q.referenceSolution.variableDeclaration)}</div>`;
+                        html += `<div style="font-size: 10.5px; margin-top: 2px;"><strong>Gọi ẩn & ĐK:</strong> ${formatMathText(q.referenceSolution.variableDeclaration)}</div>`;
                     }
                     if (q.referenceSolution.hypothesisLatex || q.referenceSolution.conclusionLatex) {
-                        html += `<div style="font-size: 11px; margin-top: 3px;">`;
+                        html += `<div style="font-size: 10.5px; margin-top: 2px;">`;
                         if (q.referenceSolution.hypothesisLatex) html += `<span><strong>GT:</strong> ${renderLatexToHtml(q.referenceSolution.hypothesisLatex, false)}</span> `;
-                        if (q.referenceSolution.conclusionLatex) html += `<span style="margin-left: 8px;"><strong>KL:</strong> ${renderLatexToHtml(q.referenceSolution.conclusionLatex, false)}</span>`;
+                        if (q.referenceSolution.conclusionLatex) html += `<span style="margin-left: 6px;"><strong>KL:</strong> ${renderLatexToHtml(q.referenceSolution.conclusionLatex, false)}</span>`;
                         html += `</div>`;
                     }
                     if (q.referenceSolution.steps) {
                         q.referenceSolution.steps.forEach(st => {
-                            html += `<div style="font-size: 12px; margin-top: 4px;">• <strong>Bước ${st.stepNumber}:</strong> ${renderLatexToHtml(st.solutionLatex, false)} <span style="color: #64748b; font-size: 11px;">(${escapeHtml(st.explanation || st.solutionText || '')})</span></div>`;
+                            html += `<div style="font-size: 11px; margin-top: 3px;">• <strong>Bước ${st.stepNumber}:</strong> ${renderLatexToHtml(st.solutionLatex, false)} <span style="color: #64748b; font-size: 10px;">(${escapeHtml(st.explanation || st.solutionText || '')})</span></div>`;
                         });
                     }
                     if (q.referenceSolution.finalAnswerLatex) {
-                        html += `<div style="margin-top: 6px; font-weight: 700; color: #1e3a8a; font-size: 12px;">🏁 Kết luận / Đáp số: ${renderLatexToHtml(q.referenceSolution.finalAnswerLatex, false)}</div>`;
+                        html += `<div style="margin-top: 4px; font-weight: 700; color: #1e3a8a; font-size: 11px;">🏁 Kết luận / Đáp số: ${renderLatexToHtml(q.referenceSolution.finalAnswerLatex, false)}</div>`;
                     }
                     html += `</div>`;
                 }
@@ -3387,28 +3399,28 @@ document.addEventListener('DOMContentLoaded', () => {
                         let badgeHtml = '';
 
                         if (stepCorrect) {
-                            badgeHtml = '<span style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #bbf7d0;">✅ ĐÚNG</span>';
+                            badgeHtml = '<span style="background: #dcfce7; color: #15803d; font-weight: 700; font-size: 10px; padding: 1.5px 6px; border-radius: 4px; border: 1px solid #bbf7d0;">✅ ĐÚNG</span>';
                         } else if (isFirstErr) {
                             stepBg = '#fff5f5';
                             stepBorder = '#ef4444';
-                            badgeHtml = '<span style="background: #ef4444; color: #ffffff; font-weight: 800; font-size: 11px; padding: 2px 8px; border-radius: 4px;">🎯 LỖI ĐẦU TIÊN (Lỗi gốc)</span>';
+                            badgeHtml = '<span style="background: #ef4444; color: #ffffff; font-weight: 800; font-size: 10px; padding: 1.5px 6px; border-radius: 4px;">🎯 LỖI ĐẦU TIÊN (Lỗi gốc)</span>';
                         } else if (isCascading) {
                             stepBg = '#fffbeb';
                             stepBorder = '#f59e0b';
-                            badgeHtml = '<span style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #fde68a;">⚠️ LỖI KÉO THEO</span>';
+                            badgeHtml = '<span style="background: #fef3c7; color: #b45309; font-weight: 700; font-size: 10px; padding: 1.5px 6px; border-radius: 4px; border: 1px solid #fde68a;">⚠️ LỖI KÉO THEO</span>';
                         } else if (isIndependent) {
                             stepBg = '#fff1f2';
                             stepBorder = '#e11d48';
-                            badgeHtml = '<span style="background: #fee2e2; color: #b91c1c; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #fecdd3;">❌ LỖI ĐỘC LẬP</span>';
+                            badgeHtml = '<span style="background: #fee2e2; color: #b91c1c; font-weight: 700; font-size: 10px; padding: 1.5px 6px; border-radius: 4px; border: 1px solid #fecdd3;">❌ LỖI ĐỘC LẬP</span>';
                         } else if (isIncomplete) {
-                            badgeHtml = '<span style="background: #fef3c7; color: #92400e; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px;">⚠️ CHƯA HOÀN THIỆN</span>';
+                            badgeHtml = '<span style="background: #fef3c7; color: #92400e; font-weight: 700; font-size: 10px; padding: 1.5px 6px; border-radius: 4px;">⚠️ CHƯA HOÀN THIỆN</span>';
                         } else if (isUnclear) {
-                            badgeHtml = '<span style="background: #f1f5f9; color: #475569; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px;">⚠️ KHÔNG ĐỌC RÕ</span>';
+                            badgeHtml = '<span style="background: #f1f5f9; color: #475569; font-weight: 700; font-size: 10px; padding: 1.5px 6px; border-radius: 4px;">⚠️ KHÔNG ĐỌC RÕ</span>';
                         } else {
-                            badgeHtml = '<span style="background: #fee2e2; color: #b91c1c; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px;">❌ SAI</span>';
+                            badgeHtml = '<span style="background: #fee2e2; color: #b91c1c; font-weight: 700; font-size: 10px; padding: 1.5px 6px; border-radius: 4px;">❌ SAI</span>';
                         }
 
-                        const pageNotice = (sheetImages.length > 1 && step.pageIndex !== undefined) ? ` <span style="font-size: 10px; background: #e2e8f0; color: #475569; padding: 1px 5px; border-radius: 3px; font-weight: normal;">Trang ${step.pageIndex + 1}</span>` : '';
+                        const pageNotice = (sheetImages.length > 1 && step.pageIndex !== undefined) ? ` <span style="font-size: 9.5px; background: #e2e8f0; color: #475569; padding: 1px 4px; border-radius: 3px; font-weight: normal;">Trang ${step.pageIndex + 1}</span>` : '';
 
                         const stepPageIdx = (step.pageIndex !== undefined && step.pageIndex >= 0 && step.pageIndex < sheetImages.length) ? step.pageIndex : 0;
                         const stepImgUrl = sheetImages[stepPageIdx]?.dataUrl || sheetImages[0]?.dataUrl;
@@ -3424,30 +3436,30 @@ document.addEventListener('DOMContentLoaded', () => {
                             const widthPct = (100 / bw) * 100;
                             const heightPct = (100 / bh) * 100;
                             stepCropHtml = `
-                                <div style="position: relative; width: 100%; height: 75px; border-radius: 4px; overflow: hidden; border: 1px solid #cbd5e1; background: #0f172a; margin: 6px 0;">
+                                <div style="position: relative; width: 100%; height: 48px; border-radius: 4px; overflow: hidden; border: 1px solid #cbd5e1; background: #0f172a; margin: 4px 0;">
                                     <img src="${stepImgUrl}" style="position: absolute; top: ${topPct}%; left: ${leftPct}%; width: ${widthPct}%; height: ${heightPct}%; max-width: none;" alt="Vùng chữ bước ${step.stepNumber}">
                                 </div>
                             `;
                         }
 
                         html += `
-                            <div style="background: ${stepBg}; border: 1.5px solid ${stepBorder}; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px;">
-                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-                                    <span style="font-weight: 800; font-size: 13px; color: #1e293b;">Bước ${step.stepNumber}${pageNotice}</span>
+                            <div class="ps-step-card ps-step-avoid" style="background: ${stepBg}; border: 1px solid ${stepBorder}; border-radius: 5px; padding: 6px 8px; margin-bottom: 5px; page-break-inside: avoid; break-inside: avoid;">
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px;">
+                                    <span style="font-weight: 800; font-size: 11.5px; color: #1e293b;">Bước ${step.stepNumber}${pageNotice}</span>
                                     <div>${badgeHtml}</div>
                                 </div>
                                 ${stepCropHtml}
-                                <div style="margin: 4px 0; font-size: 13px;">
+                                <div style="margin: 2px 0; font-size: 12px;">
                                     <span style="font-weight: 700; color: #475569;">Học sinh viết:</span>
-                                    <span style="margin-left: 6px;">${renderLatexToHtml(step.studentLatex, false)}</span>
+                                    <span style="margin-left: 4px;">${renderLatexToHtml(step.studentLatex, false)}</span>
                                 </div>
                                 ${step.comment ? `
-                                    <div style="font-size: 12px; color: #334155; margin-top: 4px; background: rgba(0,0,0,0.02); padding: 4px 8px; border-radius: 4px;">
+                                    <div style="font-size: 11px; color: #334155; margin-top: 3px; background: rgba(0,0,0,0.02); padding: 3px 6px; border-radius: 4px; line-height: 1.35;">
                                         <strong>Nhận xét:</strong> ${formatMathText(step.comment)}
                                     </div>
                                 ` : ''}
                                 ${exportOptions.corrections && step.correctionLatex ? `
-                                    <div style="background: #fff1f2; border-left: 3px solid #f43f5e; padding: 4px 8px; font-size: 12px; color: #9f1239; margin-top: 4px; border-radius: 0 4px 4px 0;">
+                                    <div style="background: #fff1f2; border-left: 3px solid #f43f5e; padding: 3px 6px; font-size: 11px; color: #9f1239; margin-top: 3px; border-radius: 0 4px 4px 0; line-height: 1.35;">
                                         <strong>💡 Cách sửa:</strong> ${renderLatexToHtml(step.correctionLatex, false)}
                                     </div>
                                 ` : ''}
@@ -3455,7 +3467,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         `;
                     });
                 } else if (q.feedback) {
-                    html += `<div style="font-size: 12px; color: #334155; margin-top: 4px;"><strong>Nhận xét:</strong> ${formatMathText(q.feedback)}</div>`;
+                    html += `<div style="font-size: 11px; color: #334155; margin-top: 3px; line-height: 1.35;"><strong>Nhận xét:</strong> ${formatMathText(q.feedback)}</div>`;
                 }
 
                 html += `</div>`; // Close ps-question-item
@@ -3466,11 +3478,11 @@ document.addEventListener('DOMContentLoaded', () => {
         if (exportOptions.studentImg && sheetImages.length > 0) {
             sheetImages.forEach((imgObj, pIdx) => {
                 html += `
-                    <div class="page-break-avoid" style="margin-top: 14px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; text-align: center; page-break-inside: avoid; break-inside: avoid; background: #ffffff;">
-                        <div style="font-weight: 700; font-size: 12px; margin-bottom: 8px; text-align: left; color: #1e293b;">
+                    <div class="ps-card-avoid" style="margin-top: 8px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 6px; text-align: center; page-break-inside: avoid; break-inside: avoid; background: #ffffff;">
+                        <div style="font-weight: 700; font-size: 11px; margin-bottom: 4px; text-align: left; color: #1e293b;">
                             📝 ẢNH BÀI LÀM GỐC CỦA HỌC SINH ${sheetImages.length > 1 ? `(Trang ${pIdx + 1}/${sheetImages.length})` : ''}:
                         </div>
-                        <img src="${imgObj.dataUrl}" alt="Ảnh bài làm trang ${pIdx + 1}" style="max-width: 100%; max-height: 320px; object-fit: contain; border-radius: 4px; border: 1px solid #e2e8f0;">
+                        <img src="${imgObj.dataUrl}" alt="Ảnh bài làm trang ${pIdx + 1}" style="max-width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; border: 1px solid #e2e8f0;">
                     </div>
                 `;
             });
@@ -3486,32 +3498,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (strengths.length > 0 || errors.length > 0 || review.length > 0 || overall.length > 0) {
                 html += `
-                    <div class="page-break-avoid" style="margin-top: 16px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 14px; background: #f8fafc; page-break-inside: avoid; break-inside: avoid;">
-                        <div style="font-weight: 800; font-size: 13px; color: #1e293b; margin-bottom: 10px; display: flex; align-items: center; gap: 6px;">
+                    <div class="ps-card-avoid" style="margin-top: 8px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; background: #f8fafc; page-break-inside: avoid; break-inside: avoid;">
+                        <div style="font-weight: 800; font-size: 11.5px; color: #1e293b; margin-bottom: 6px; display: flex; align-items: center; gap: 5px;">
                             <span>📊 TỔNG KẾT ĐÁNH GIÁ SƯ PHẠM & LỜI KHUYÊN PHÁT TRIỂN</span>
                         </div>
-                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px;">
                             ${strengths.length > 0 ? `
-                                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 6px; padding: 8px 10px;">
-                                    <div style="color: #15803d; font-weight: 700; font-size: 11px; margin-bottom: 3px;">✓ ĐIỂM SÁNG (ƯU ĐIỂM)</div>
-                                    <div style="font-size: 11px; color: #166534; line-height: 1.4;">${strengths.map(escapeHtml).join('; ')}</div>
+                                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 4px; padding: 5px 8px;">
+                                    <div style="color: #15803d; font-weight: 700; font-size: 10px; margin-bottom: 2px;">✓ ĐIỂM SÁNG (ƯU ĐIỂM)</div>
+                                    <div style="font-size: 10.5px; color: #166534; line-height: 1.35;">${strengths.map(escapeHtml).join('; ')}</div>
                                 </div>
                             ` : ''}
                             ${errors.length > 0 ? `
-                                <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 6px; padding: 8px 10px;">
-                                    <div style="color: #b91c1c; font-weight: 700; font-size: 11px; margin-bottom: 3px;">⚠ LỖI CẦN LƯU Ý</div>
-                                    <div style="font-size: 11px; color: #991b1b; line-height: 1.4;">${errors.map(escapeHtml).join('; ')}</div>
+                                <div style="background: #fff1f2; border: 1px solid #fecdd3; border-radius: 4px; padding: 5px 8px;">
+                                    <div style="color: #b91c1c; font-weight: 700; font-size: 10px; margin-bottom: 2px;">⚠ LỖI CẦN LƯU Ý</div>
+                                    <div style="font-size: 10.5px; color: #991b1b; line-height: 1.35;">${errors.map(escapeHtml).join('; ')}</div>
                                 </div>
                             ` : ''}
                             ${review.length > 0 ? `
-                                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 8px 10px;">
-                                    <div style="color: #0369a1; font-weight: 700; font-size: 11px; margin-bottom: 3px;">💡 TRỌNG TÂM ÔN TẬP</div>
-                                    <div style="font-size: 11px; color: #075985; line-height: 1.4;">${review.map(escapeHtml).join('; ')}</div>
+                                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 5px 8px;">
+                                    <div style="color: #0369a1; font-weight: 700; font-size: 10px; margin-bottom: 2px;">💡 TRỌNG TÂM ÔN TẬP</div>
+                                    <div style="font-size: 10.5px; color: #075985; line-height: 1.35;">${review.map(escapeHtml).join('; ')}</div>
                                 </div>
                             ` : ''}
                         </div>
                         ${overall.length > 0 ? `
-                            <div style="margin-top: 8px; font-size: 11.5px; color: #334155; line-height: 1.4;">
+                            <div style="margin-top: 5px; font-size: 11px; color: #334155; line-height: 1.35;">
                                 <strong>Lời khuyên chung:</strong> ${overall.map(escapeHtml).join('; ')}
                             </div>
                         ` : ''}
@@ -3525,30 +3537,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const remedialItems = generateRemedialQuestions(data);
             if (remedialItems && remedialItems.length > 0) {
                 html += `
-                    <div class="page-break-avoid" style="margin-top: 18px; border: 1.5px solid #0284c7; border-radius: 8px; padding: 14px; background: #ffffff; page-break-inside: avoid; break-inside: avoid;">
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1.5px solid #e0f2fe; padding-bottom: 8px; margin-bottom: 10px;">
+                    <div class="ps-card-avoid" style="margin-top: 8px; border: 1.5px solid #0284c7; border-radius: 6px; padding: 8px 10px; background: #ffffff; page-break-inside: avoid; break-inside: avoid;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e0f2fe; padding-bottom: 4px; margin-bottom: 6px;">
                             <div>
-                                <span style="font-size: 13px; font-weight: 800; color: #0369a1; text-transform: uppercase;">🎯 V. BÀI TẬP BỔ TRỢ & RÈN LUYỆN TẠI NHÀ (Khắc phục lỗ hổng kiến thức)</span>
-                                <div style="font-size: 10.5px; color: #64748b; margin-top: 2px;">Đề xuất theo các lỗi học sinh mắc phải nhằm rèn luyện tư duy toán học</div>
+                                <span style="font-size: 11.5px; font-weight: 800; color: #0369a1; text-transform: uppercase;">🎯 V. BÀI TẬP BỔ TRỢ & RÈN LUYỆN TẠI NHÀ</span>
+                                <div style="font-size: 9.5px; color: #64748b;">Khắc phục lỗ hổng kiến thức theo đề xuất của AI & Giáo viên</div>
                             </div>
-                            <span style="background: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 11px; padding: 2px 8px; border-radius: 4px;">${remedialItems.length} BÀI TẬP</span>
+                            <span style="background: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 10px; padding: 1.5px 6px; border-radius: 4px;">${remedialItems.length} BÀI TẬP</span>
                         </div>
                 `;
 
                 remedialItems.forEach((rm, rIdx) => {
                     html += `
-                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 12px; margin-bottom: 10px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-wrap: wrap; gap: 4px;">
-                                <strong style="color: #1e3a8a; font-size: 12px;">Bài ${rIdx + 1}: ${escapeHtml(rm.title || 'Rèn luyện kỹ năng')} (${escapeHtml(rm.targetQuestion || '')})</strong>
-                                ${rm.weakness ? `<span style="font-size: 10.5px; color: #b91c1c; font-weight: 600;">⚠️ ${escapeHtml(rm.weakness)}</span>` : ''}
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 8px; margin-bottom: 6px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; flex-wrap: wrap; gap: 4px;">
+                                <strong style="color: #1e3a8a; font-size: 11px;">Bài ${rIdx + 1}: ${escapeHtml(rm.title || 'Rèn luyện kỹ năng')} (${escapeHtml(rm.targetQuestion || '')})</strong>
+                                ${rm.weakness ? `<span style="font-size: 10px; color: #b91c1c; font-weight: 600;">⚠️ ${escapeHtml(rm.weakness)}</span>` : ''}
                             </div>
-                            <div style="font-size: 12px; color: #1e293b; line-height: 1.5; margin-bottom: 6px;">
+                            <div style="font-size: 11px; color: #1e293b; line-height: 1.35; margin-bottom: 4px;">
                                 <strong>Đề bài:</strong> ${formatMathText(rm.problemLatex || '')}
                             </div>
-                            <div style="font-size: 11px; color: #92400e; background: #fffbeb; padding: 6px 10px; border-radius: 4px; border-left: 3px solid #f59e0b; margin-bottom: 8px;">
+                            <div style="font-size: 10.5px; color: #92400e; background: #fffbeb; padding: 4px 8px; border-radius: 4px; border-left: 3px solid #f59e0b; margin-bottom: 4px; line-height: 1.35;">
                                 <strong>💡 Gợi ý phương pháp:</strong> ${formatMathText(rm.hint || '')}
                             </div>
-                            <div style="border-top: 1px dashed #cbd5e1; padding-top: 6px; min-height: 48px; font-size: 10px; color: #94a3b8; font-style: italic;">
+                            <div style="border-top: 1px dashed #cbd5e1; padding-top: 3px; min-height: 24px; font-size: 9.5px; color: #94a3b8; font-style: italic;">
                                 (Học sinh trình bày bài làm củng cố vào đây và nộp lại cho thầy/cô...)
                             </div>
                         </div>
@@ -3559,36 +3571,36 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Signatures & QR Code Verification
+        // Signatures & QR Code Verification (COMPACT)
         html += `
-            <div class="page-break-avoid" style="margin-top: 24px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 20px; text-align: center; font-size: 12px; page-break-inside: avoid; break-inside: avoid;">
-                <div style="width: 170px;">
+            <div class="ps-signatures-block" style="margin-top: 10px; display: flex; justify-content: space-between; align-items: flex-end; padding: 0 14px; text-align: center; font-size: 11px; page-break-inside: avoid; break-inside: avoid;">
+                <div style="width: 160px;">
                     <strong style="color: #1e293b;">Ý KIẾN PHỤ HUYNH</strong><br>
-                    <span style="font-size: 10px; color: #64748b;">(Ký và ghi rõ họ tên)</span>
-                    <div style="height: 48px; border-bottom: 1px dashed #cbd5e1; width: 140px; margin: 4px auto 0;"></div>
+                    <span style="font-size: 9.5px; color: #64748b;">(Ký và ghi rõ họ tên)</span>
+                    <div style="height: 26px; border-bottom: 1px dashed #cbd5e1; width: 130px; margin: 2px auto 0;"></div>
                 </div>
 
                 <!-- MÃ QR TRA CỨU ĐÁP ÁN & LỜI GIẢI CHI TIẾT -->
                 <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer;" onclick="if(window.openQrLookupModal) window.openQrLookupModal();" title="Nhấn hoặc quét mã QR để tra cứu lời giải chi tiết và đáp án trực tuyến">
-                    <div class="qr-code-box" style="padding: 3px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 8px;">
-                        <canvas class="print-sheet-qr-canvas" style="width: 76px; height: 76px; display: block;"></canvas>
+                    <div class="qr-code-box" style="padding: 2px; background: #ffffff; border: 1.5px solid #cbd5e1; border-radius: 6px;">
+                        <canvas class="print-sheet-qr-canvas" style="width: 58px; height: 58px; display: block;"></canvas>
                     </div>
-                    <span style="font-size: 9.5px; color: #475569; font-weight: 700; margin-top: 4px; text-align: center; max-width: 125px; line-height: 1.2;">
+                    <span style="font-size: 8.5px; color: #475569; font-weight: 700; margin-top: 2px; text-align: center; max-width: 120px; line-height: 1.15;">
                         📱 Quét mã xem lời giải chi tiết
                     </span>
                 </div>
 
-                <div style="width: 190px;">
-                    <span style="font-size: 11px; color: #64748b; font-style: italic;">Hà Nội, ngày ...... tháng ...... năm 20...</span><br>
+                <div style="width: 180px;">
+                    <span style="font-size: 10px; color: #64748b; font-style: italic;">Hà Nội, ngày ...... tháng ...... năm 20...</span><br>
                     <strong style="color: #1e293b;">GIÁO VIÊN BỘ MÔN TOÁN</strong><br>
-                    <span style="font-size: 10px; color: #64748b;">(Ký và ghi rõ họ tên)</span>
-                    <div style="height: 38px; margin: 4px auto 0;"></div>
-                    <strong style="color: #1e3a8a; font-size: 13.5px; display: block;">${escapeHtml(branding.teacherName)}</strong>
+                    <span style="font-size: 9.5px; color: #64748b;">(Ký và ghi rõ họ tên)</span>
+                    <div style="height: 24px; margin: 2px auto 0;"></div>
+                    <strong style="color: #1e3a8a; font-size: 12px; display: block;">${escapeHtml(branding.teacherName)}</strong>
                 </div>
             </div>
             
             <!-- WATERMARK FOOTER -->
-            <div style="margin-top: 24px; text-align: center; font-size: 11px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+            <div style="margin-top: 8px; text-align: center; font-size: 9.5px; color: #94a3b8; border-top: 1px dashed #e2e8f0; padding-top: 4px;">
                 📐 TOÁN MATSUDA AI • Nền tảng Đánh giá & Hỗ trợ Sư phạm THCS Tự động
             </div>
         `;
@@ -3632,12 +3644,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (window.html2pdf) {
             const opt = {
-                margin: [10, 10, 10, 10],
+                margin: [6, 8, 6, 8],
                 filename: fileName,
                 image: { type: 'jpeg', quality: 0.98 },
                 html2canvas: { scale: 2, useCORS: true, logging: false },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                pagebreak: { mode: ['avoid-all', 'css', 'legacy'], avoid: ['.page-break-avoid', '.ps-question-item', '.ps-card-avoid'] }
+                pagebreak: { mode: ['css', 'legacy'], avoid: ['.ps-step-avoid', '.ps-signatures-block', '.ps-card-avoid'] }
             };
 
             const wrapper = document.getElementById('export-sheet-wrapper');
@@ -5356,11 +5368,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     const opt = {
-                        margin: [10, 10, 10, 10],
+                        margin: [6, 8, 6, 8],
                         image: { type: 'jpeg', quality: 0.98 },
                         html2canvas: { scale: 2, useCORS: true, logging: false },
                         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-                        pagebreak: { mode: ['avoid-all', 'css', 'legacy'], avoid: ['.page-break-avoid', '.ps-question-item', '.ps-card-avoid'] }
+                        pagebreak: { mode: ['css', 'legacy'], avoid: ['.ps-step-avoid', '.ps-signatures-block', '.ps-card-avoid'] }
                     };
 
                     const pdfBlob = await window.html2pdf().set(opt).from(sheet).outputPdf('blob');

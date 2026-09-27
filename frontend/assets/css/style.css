@@ -864,7 +864,7 @@ main { padding-top: 80px; }
 }
 
 /* ========================================================
-   PRINT & A4 EXPORT OPTIMIZATIONS
+   PRINT & A4 EXPORT OPTIMIZATIONS (COMPACT & SPACE-EFFICIENT)
 ======================================================== */
 .printable-sheet {
     width: 100%;
@@ -873,12 +873,13 @@ main { padding-top: 80px; }
     background: #ffffff;
     color: #0f172a;
     font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
-    line-height: 1.5;
+    line-height: 1.35;
+    font-size: 12px;
 }
 
 @page {
     size: A4 portrait;
-    margin: 12mm 10mm;
+    margin: 6mm 8mm;
 }
 
 @media print {
@@ -901,10 +902,10 @@ main { padding-top: 80px; }
     .printable-sheet {
         box-shadow: none !important;
         border: none !important;
-        padding: 10mm 10mm !important;
+        padding: 6mm 8mm !important;
     }
-    .page-break-avoid,
-    .ps-question-item,
+    .ps-step-avoid,
+    .ps-signatures-block,
     .ps-card-avoid {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
