@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "TOÁN MATSUDA AI | Chấm Bài Tự Động",
+  "short_name": "Toán Matsuda",
+  "description": "Nền tảng AI hỗ trợ giáo viên và học sinh chấm bài Toán tự động từ ảnh chụp.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

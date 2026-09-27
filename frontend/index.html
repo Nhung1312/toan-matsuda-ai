@@ -8,16 +8,30 @@
     <meta property="og:title" content="TOÁN MATSUDA AI | Chấm Bài Tự Động">
     <meta property="og:description" content="Nền tảng AI hỗ trợ giáo viên và học sinh chấm bài Toán tự động từ ảnh chụp.">
     
-    <!-- Phông chữ Inter hiện đại -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Phông chữ Plus Jakarta Sans & Inter hiện đại cho Toán học & Sư phạm -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     
     <!-- KaTeX Thư viện render Công thức Toán học -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+    <!-- Thư viện Xuất PDF, Xuất Ảnh, Nén ZIP và Mã QR -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 
     <!-- CSS chính -->
     <link rel="stylesheet" href="assets/css/style.css">
+    
+    <!-- PWA Web App Manifest & Mobile Theme -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Toán Matsuda">
 </head>
 <body>
 
@@ -30,9 +44,18 @@
             </div>
             <nav class="navbar">
                 <a href="#" class="nav-link active">Trang chủ</a>
-                <a href="#" class="nav-link">Giới thiệu</a>
-                <a href="#" class="nav-link">Tính năng</a>
-                <a href="#" class="nav-link">Liên hệ</a>
+                <button type="button" id="btn-pwa-install" class="nav-btn-history" style="background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; font-weight: 700;" title="Cài đặt ứng dụng vào điện thoại hoặc máy tính để mở toàn màn hình như App">
+                    📲 Cài đặt App
+                </button>
+                <button type="button" id="btn-open-branding" class="nav-btn-history" title="Cài đặt tên trường và giáo viên hiển thị trên phiếu chấm">
+                    🏫 Tên trường & Thầy cô
+                </button>
+                <button type="button" id="btn-open-hotkeys" class="nav-btn-history" title="Danh sách phím tắt cho giáo viên (Ctrl+Enter, Ctrl+P, Ctrl+S, Esc...)">
+                    ⌨️ Phím tắt
+                </button>
+                <button type="button" id="btn-open-history" class="nav-btn-history">
+                    📜 Lịch sử chấm bài <span id="history-badge-count" class="history-badge">0</span>
+                </button>
             </nav>
         </div>
     </header>
@@ -73,47 +96,98 @@
         <section class="workspace">
             <div class="workspace-container glass-card">
                 
-                <!-- Khu vực Upload -->
+                <!-- BỘ CHUYỂN ĐỔI CHẾ ĐỘ CHẤM: TỪNG BÀI vs HÀNG LOẠT (CẢ LỚP) -->
+                <div class="workspace-tabs-header">
+                    <button type="button" id="tab-btn-single" class="workspace-tab-btn active">
+                        📝 Chấm từng bài (Cá nhân)
+                    </button>
+                    <button type="button" id="tab-btn-batch" class="workspace-tab-btn">
+                        📚 Chấm bài hàng loạt (Cả lớp) <span class="tab-badge-new">Mới</span>
+                    </button>
+                </div>
+
+                <!-- Khu vực Upload Đơn lẻ (Mặc định) -->
                 <div id="upload-section" class="upload-area">
-                    <div class="upload-box" id="drop-zone">
-                        
+                    <div class="upload-box" id="drop-zone" style="position: relative;">
+                        <!-- Native file input covering the entire drop zone for bulletproof 100% native click & drag support -->
+                        <input type="file" id="file-input" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/*,.heic,.heif,.jfif" multiple aria-label="Chọn ảnh bài làm Toán" style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; z-index: 10;" title="Nhấn để chọn ảnh hoặc kéo thả ảnh vào đây">
+
                         <!-- Trạng thái mặc định -->
-                        <div id="upload-default">
+                        <div id="upload-default" style="cursor: pointer; width: 100%;">
                             <div class="upload-icon">📄</div>
-                            <h3 class="upload-text">Kéo thả ảnh bài làm vào đây</h3>
-                            <input type="file" id="file-input" hidden accept="image/*">
-                            <button class="btn btn-outline mt-3" onclick="document.getElementById('file-input').click()">Chọn tệp</button>
+                            <h3 class="upload-text">Kéo thả hoặc nhấn để chọn ảnh bài làm</h3>
+                            <p style="font-size: 13px; color: var(--text-secondary); margin-top: 5px;">Hỗ trợ 1 ảnh hoặc nhiều ảnh / nhiều trang cùng lúc (PNG, JPG, WEBP, JPEG)</p>
+                            
+                            <div style="display: flex; gap: 10px; justify-content: center; align-items: center; margin-top: 14px; flex-wrap: wrap; position: relative; z-index: 20; pointer-events: none;">
+                                <label id="btn-choose-file" class="btn btn-outline" style="cursor: pointer; position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 8px; pointer-events: auto; z-index: 30;">
+                                    📁 Chọn tệp từ thiết bị
+                                    <input type="file" id="file-input-btn" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/*,.heic,.heif,.jfif" multiple style="position: absolute; inset: 0; opacity: 0; width: 100%; height: 100%; cursor: pointer;">
+                                </label>
+                                <button type="button" id="btn-open-camera" class="btn btn-secondary" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; pointer-events: auto; z-index: 30;" title="Chụp ảnh bài làm trực tiếp từ máy ảnh">
+                                    📸 Chụp bằng máy ảnh
+                                </button>
+                                <button type="button" id="btn-paste-clipboard" class="btn btn-secondary" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; pointer-events: auto; z-index: 30;" title="Dán ảnh trực tiếp từ bộ nhớ tạm Clipboard (Ctrl + V)">
+                                    📋 Dán ảnh (Ctrl + V)
+                                </button>
+                                <button type="button" id="btn-sample-math" class="btn btn-secondary" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; border-color: #93c5fd; background: #f0f7ff; color: #1d4ed8; font-weight: 600; pointer-events: auto; z-index: 30;" title="Tải bài làm mẫu môn Toán THCS để thử nghiệm tính năng ngay lập tức">
+                                    ✨ Dùng bài làm mẫu thử nghiệm
+                                </button>
+                            </div>
+                            
+                            <p style="font-size: 12px; color: #64748b; margin-top: 12px;">💡 Mẹo: Bạn có thể chọn nhiều ảnh, chụp trực tiếp bằng <strong>máy ảnh</strong>, dán ảnh màn hình bằng <strong>Ctrl + V</strong> hoặc nhấn <em>Dùng bài làm mẫu thử nghiệm</em></p>
                         </div>
                         
-                        <!-- Trạng thái xem trước tệp -->
-                        <div id="upload-preview" class="hidden fade-in">
-                            <h3 style="margin-bottom: 15px; color: var(--text-secondary);">📷 Preview</h3>
+                        <!-- Trạng thái quản lý nhiều trang bài làm -->
+                        <div id="upload-preview" class="hidden fade-in" style="width: 100%; position: relative; z-index: 20;">
+                            <div class="multi-pages-toolbar">
+                                <div class="pages-count-badge">
+                                    📄 <strong id="pages-count-text">1 trang bài làm</strong>
+                                </div>
+                                <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                    <button type="button" id="btn-enhance-all-pages" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; color: #047857; border-color: #a7f3d0; font-weight: 700;" title="Quét rõ nét tài liệu, khử bóng mờ và làm trắng nền giấy cho toàn bộ bài làm">
+                                        ⚡ Quét nét tất cả
+                                    </button>
+                                    <button type="button" id="btn-add-camera-page" class="btn btn-outline btn-sm" style="display: inline-flex; align-items: center; gap: 4px;" title="Chụp thêm trang bằng máy ảnh">
+                                        📸 Chụp thêm
+                                    </button>
+                                    <label id="btn-add-more-pages" class="btn btn-outline btn-sm" style="position: relative; overflow: hidden; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                        ➕ Thêm tệp
+                                        <input type="file" id="file-input-more" accept="image/png,image/jpeg,image/jpg,image/webp,image/gif,image/bmp,image/*,.heic,.heif,.jfif" multiple style="position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                                    </label>
+                                    <button type="button" id="btn-clear-all-pages" class="btn btn-danger btn-sm">🗑 Xóa tất cả</button>
+                                </div>
+                            </div>
                             
-                            <img id="preview-image" src="" alt="Bản xem trước" class="preview-image hidden">
-                            <div id="preview-pdf" class="upload-icon hidden" style="font-size: 60px;">📄</div>
-                            
-                            <div class="file-info-card slide-up">
-                                <div class="file-detail-row">
-                                    <span class="detail-label">Tên:</span>
-                                    <span id="file-name" class="detail-value">filename.jpg</span>
+                            <!-- Danh sách các trang bài làm (Thẻ trang với xoay, đổi thứ tự, xóa) -->
+                            <div id="pages-list-container" class="pages-list-grid">
+                                <!-- Dynamic page cards inject here -->
+                            </div>
+
+                            <!-- BỘ LỌC QUÉT TÀI LIỆU VÀ LÀM RÕ CHỮ VIẾT TAY (MỤC 1) -->
+                            <div class="filter-global-bar">
+                                <div style="display: flex; align-items: center; gap: 6px;">
+                                    <span style="font-size: 15px;">🖨️</span>
+                                    <strong style="font-size: 12.5px; color: #1e293b;">Bộ lọc quét chữ viết tay:</strong>
+                                    <span style="font-size: 11px; color: #64748b; font-weight: 500;">(Khử bóng mờ đèn học, làm trắng nền giấy & làm đậm nét chì/số mũ)</span>
                                 </div>
-                                <div class="file-detail-row">
-                                    <span class="detail-label">Dung lượng:</span>
-                                    <span id="file-size" class="detail-value">0 MB</span>
-                                </div>
-                                <div class="file-detail-row">
-                                    <span class="detail-label">Định dạng:</span>
-                                    <span id="file-type" class="detail-value">JPG</span>
-                                </div>
-                                <div class="file-detail-row" id="row-dimensions">
-                                    <span class="detail-label" id="dim-label">Kích thước:</span>
-                                    <span id="file-dimensions" class="detail-value">0 × 0</span>
+                                <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                                    <button type="button" class="btn-filter-preset active" data-preset="original" title="Giữ nguyên màu sắc và độ sáng gốc">
+                                        📄 Ảnh gốc
+                                    </button>
+                                    <button type="button" class="btn-filter-preset" data-preset="scanner" title="Làm trắng nền giấy kẻ ô li, khử bóng mờ và làm rõ nét mực/bút chì">
+                                        ⚡ Quét tài liệu (Scan)
+                                    </button>
+                                    <button type="button" class="btn-filter-preset" data-preset="contrast" title="Tăng tương phản tối đa, làm đậm nét số mũ nhỏ, căn thức và dấu âm">
+                                        🔆 Tương phản cao
+                                    </button>
+                                    <button type="button" class="btn-filter-preset" data-preset="bw" title="Chuyển sang đen trắng chuẩn Photocopy tài liệu">
+                                        ⬛ Trắng đen
+                                    </button>
                                 </div>
                             </div>
 
-                            <div class="preview-actions">
-                                <button id="btn-remove-file" class="btn btn-danger">🗑 Xóa file</button>
-                                <button id="btn-reselect" class="btn btn-secondary">🔄 Chọn lại</button>
+                            <div class="optimization-notice-card">
+                                <span>⚡ <strong>Tự động tối ưu thích ứng:</strong> Ảnh được quét rõ nét, cân chỉnh góc xoay, kích thước và bảo toàn 100% chi tiết số mũ, phân số, dấu âm và hình vẽ trước khi gửi AI.</span>
                             </div>
                         </div>
                     </div>
@@ -126,56 +200,435 @@
                     </div>
                 </div>
 
-                <!-- Khu vực Kết quả (Sprint 4 Dynamic AI Render) -->
-                <div id="result-section" class="result-area hidden">
-                    <div class="result-header" style="justify-content: center; margin-bottom: 20px;">
-                        <h2>Kết quả phân tích từ AI</h2>
+                <!-- KHU VỰC CHẤM BÀI HÀNG LOẠT (CẢ LỚP) -->
+                <div id="batch-section" class="batch-area hidden fade-in">
+                    <!-- Banner hướng dẫn & tính năng -->
+                    <div class="batch-banner glass-card">
+                        <div class="batch-banner-text">
+                            <h3 class="batch-banner-title">📚 Chấm Bài Hàng Loạt Cho Cả Lớp</h3>
+                            <p class="batch-banner-desc">Tải lên bài làm của nhiều học sinh (mỗi em 1 hoặc nhiều trang). AI sẽ tự động chấm điểm tuần tự, phân tích sư phạm, tổng hợp sổ điểm và xuất báo cáo PDF / Ảnh / Excel cho từng em.</p>
+                        </div>
+                        <div class="batch-quick-actions">
+                            <label class="btn btn-primary btn-sm" style="cursor: pointer; position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 6px;" title="Chọn nhiều ảnh hoặc file .ZIP bài làm cả lớp">
+                                📁 Thêm ảnh / File .ZIP cả lớp
+                                <input type="file" id="batch-file-input" accept="image/*,.heic,.heif,.jfif,.zip,application/zip,application/x-zip-compressed" multiple style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+                            </label>
+                            <button type="button" id="btn-batch-sample-demo" class="btn btn-secondary btn-sm" style="border-color: #93c5fd; background: #f0f7ff; color: #1d4ed8; font-weight: 600;">
+                                ✨ Dùng bộ bài mẫu (3 học sinh)
+                            </button>
+                            <button type="button" id="btn-batch-clear-all" class="btn btn-outline btn-sm text-danger" title="Xóa toàn bộ danh sách lớp">
+                                🗑 Xóa danh sách
+                            </button>
+                        </div>
                     </div>
-                    
-                    <div class="score-card" style="margin-bottom: 20px;">
-                        <div class="score-wrapper">
-                            <div class="score-circle">
-                                <span class="score-number" id="animated-score">0.0</span>
-                                <span class="score-max">/ 10</span>
+
+                    <!-- Bảng điều khiển tiến trình chấm bài -->
+                    <div id="batch-progress-card" class="batch-progress-box glass-card hidden">
+                        <div class="batch-progress-header">
+                            <div>
+                                <span class="batch-progress-title">⚡ Tiến trình chấm bài tự động:</span>
+                                <strong id="batch-progress-status-text" style="color: #2563eb; margin-left: 6px;">Đang chuẩn bị...</strong>
                             </div>
-                            <!-- Thang điểm màu -->
-                            <div class="color-scale-bar" title="Thang điểm màu">
-                                <div id="score-marker" class="color-scale-marker"></div>
+                            <div class="batch-progress-count">
+                                Đã chấm: <strong id="batch-progress-counter">0 / 0</strong> bài
+                            </div>
+                        </div>
+                        <div class="batch-progress-bar-track">
+                            <div id="batch-progress-bar-fill" class="batch-progress-bar-fill" style="width: 0%;"></div>
+                        </div>
+                        <div class="batch-progress-actions">
+                            <button type="button" id="btn-batch-start" class="btn btn-primary btn-sm">
+                                ▶️ Bắt đầu chấm tất cả
+                            </button>
+                            <button type="button" id="btn-batch-stop" class="btn btn-secondary btn-sm hidden">
+                                ⏸️ Tạm dừng
+                            </button>
+                            <button type="button" id="btn-batch-retry-failed" class="btn btn-outline btn-sm hidden">
+                                🔄 Chấm lại các bài lỗi
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- THỐNG KÊ PHỔ ĐIỂM CẢ LỚP (GRADEBOOK ANALYTICS) -->
+                    <div id="batch-analytics-card" class="batch-analytics-box glass-card hidden">
+                        <div class="batch-analytics-header">
+                            <h4>📊 Tổng Hợp Phổ Điểm & Năng Lực Cả Lớp</h4>
+                            <span style="font-size: 12px; color: #64748b;">Tự động cập nhật theo thời gian thực</span>
+                        </div>
+                        <div class="batch-kpi-grid">
+                            <div class="batch-kpi-card kpi-avg">
+                                <span class="kpi-label">Điểm Trung Bình</span>
+                                <span class="kpi-value" id="batch-kpi-avg">0.0</span>
+                                <span class="kpi-sub">thang điểm 10</span>
+                            </div>
+                            <div class="batch-kpi-card kpi-max">
+                                <span class="kpi-label">Điểm Cao Nhất</span>
+                                <span class="kpi-value" id="batch-kpi-max">0.0</span>
+                                <span class="kpi-sub" id="batch-kpi-max-student">-</span>
+                            </div>
+                            <div class="batch-kpi-card kpi-min">
+                                <span class="kpi-label">Điểm Thấp Nhất</span>
+                                <span class="kpi-value" id="batch-kpi-min">0.0</span>
+                                <span class="kpi-sub" id="batch-kpi-min-student">-</span>
+                            </div>
+                            <div class="batch-kpi-card kpi-pass">
+                                <span class="kpi-label">Tỉ Lệ Đạt (≥ 5.0)</span>
+                                <span class="kpi-value" id="batch-kpi-pass-rate">0%</span>
+                                <span class="kpi-sub" id="batch-kpi-pass-count">0/0 học sinh</span>
+                            </div>
+                        </div>
+
+                        <!-- Thanh phân bố xếp loại -->
+                        <div class="batch-distribution-row">
+                            <span style="font-size: 12px; font-weight: 700; color: #475569;">Phân bố học lực:</span>
+                            <div class="batch-distribution-bar">
+                                <div id="dist-bar-excellent" class="dist-seg seg-excellent" style="width: 0%;" title="Xuất sắc (9-10)"></div>
+                                <div id="dist-bar-good" class="dist-seg seg-good" style="width: 0%;" title="Giỏi (8-<9)"></div>
+                                <div id="dist-bar-fair" class="dist-seg seg-fair" style="width: 0%;" title="Khá (6.5-<8)"></div>
+                                <div id="dist-bar-pass" class="dist-seg seg-pass" style="width: 0%;" title="Trung bình (5-<6.5)"></div>
+                                <div id="dist-bar-fail" class="dist-seg seg-fail" style="width: 0%;" title="Chưa đạt (<5)"></div>
+                            </div>
+                            <div class="batch-distribution-legend">
+                                <span class="leg-item"><span class="dot dot-excellent"></span> Xuất sắc (<strong id="cnt-excellent">0</strong>)</span>
+                                <span class="leg-item"><span class="dot dot-good"></span> Giỏi (<strong id="cnt-good">0</strong>)</span>
+                                <span class="leg-item"><span class="dot dot-fair"></span> Khá (<strong id="cnt-fair">0</strong>)</span>
+                                <span class="leg-item"><span class="dot dot-pass"></span> Trung bình (<strong id="cnt-pass">0</strong>)</span>
+                                <span class="leg-item"><span class="dot dot-fail"></span> Chưa đạt (<strong id="cnt-fail">0</strong>)</span>
+                            </div>
+                        </div>
+
+                        <!-- Bảng phân tích những lỗi cả lớp hay sai nhất -->
+                        <div id="batch-common-errors-box" class="batch-common-errors-card hidden" style="margin-top: 14px; background: #fff1f2; border: 1.5px solid #fecdd3; border-radius: 10px; padding: 12px 16px;">
+                            <div style="font-size: 12.5px; font-weight: 800; color: #b91c1c; margin-bottom: 8px; display: flex; align-items: center; gap: 6px;">
+                                <span>⚠️ TOP LỖI SAI & LỖ HỔNG KIẾN THỨC CẢ LỚP CẦN ÔN TẬP:</span>
+                            </div>
+                            <div id="batch-common-errors-list" style="display: flex; flex-direction: column; gap: 6px;">
+                                <!-- Dynamic common errors injected here -->
+                            </div>
+                        </div>
+
+                        <!-- MỤC 3: PHÂN TÍCH MA TRẬN LỖI SAI CẢ LỚP & CÂU HỎI SAI NHIỀU NHẤT -->
+                        <div id="batch-heatmap-card" class="batch-heatmap-card hidden">
+                            <div class="batch-heatmap-header">
+                                <div class="batch-heatmap-title">
+                                    <span>🎯 Ma Trận Tỷ Lệ Đúng/Sai Theo Từng Câu & Câu Bẫy Cả Lớp:</span>
+                                </div>
+                                <button type="button" id="btn-copy-pedagogy-report" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 3px 8px; border-color: #93c5fd; color: #1d4ed8;" title="Sao chép báo cáo phân tích chuyên môn để đưa vào sổ kế hoạch giảng dạy hoặc biên bản tổ chuyên môn">
+                                    📋 Sao chép báo cáo chuyên môn
+                                </button>
+                            </div>
+                            <div id="batch-heatmap-grid" class="batch-heatmap-grid">
+                                <!-- Dynamic heatmap items inject here -->
+                            </div>
+                            <div id="pedagogical-tips-box" class="pedagogical-tips-box hidden">
+                                <div class="pedagogical-tips-title">
+                                    <span>💡 Đề xuất sư phạm cho giáo viên trong tiết sửa bài:</span>
+                                </div>
+                                <div id="pedagogical-tips-content" class="pedagogical-tips-content">
+                                    <!-- Dynamic tips injected here -->
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Đánh giá chung (Summary) -->
-                    <div style="text-align: center; margin-bottom: 30px; padding: 0 20px;">
-                        <h3 class="gradient-text" style="font-size: 18px; margin-bottom: 8px;">Đánh giá tổng quan</h3>
-                        <p id="result-summary" style="color: var(--text-primary); font-size: 16px; font-weight: 500;">...</p>
+                    <!-- DANH SÁCH BÀI LÀM & BẢNG ĐIỂM CẢ LỚP -->
+                    <div class="batch-table-container glass-card">
+                        <div class="batch-table-header">
+                            <div>
+                                <h4 style="font-size: 16px; font-weight: 800; color: #1e293b; margin: 0;">📋 Sổ Điểm Chi Tiết Lớp Học</h4>
+                                <span id="batch-total-students-label" style="font-size: 12px; color: #64748b;">Chưa có bài làm nào trong danh sách</span>
+                            </div>
+                            <div class="batch-table-export-tools">
+                                <button type="button" id="btn-batch-export-excel" class="btn btn-outline btn-sm" title="Xuất bảng điểm ra file Excel/CSV chuẩn font tiếng Việt">
+                                    📊 Xuất Bảng Điểm (.CSV)
+                                </button>
+                                <button type="button" id="btn-batch-export-zip-pdf" class="btn btn-primary btn-sm" title="Nén toàn bộ phiếu PDF của cả lớp vào 1 file ZIP duy nhất">
+                                    📦 Tải ZIP (Tất Cả PDF)
+                                </button>
+                                <button type="button" id="btn-batch-export-zip-img" class="btn btn-outline btn-sm" title="Nén toàn bộ ảnh phiếu trả bài của cả lớp vào 1 file ZIP duy nhất">
+                                    📦 Tải ZIP (Tất Cả Ảnh)
+                                </button>
+                                <button type="button" id="btn-batch-export-all-pdf" class="btn btn-secondary btn-sm" title="Tải lẻ từng file PDF">
+                                    📄 Tải Lẻ PDF
+                                </button>
+                                <button type="button" id="btn-batch-export-all-img" class="btn btn-secondary btn-sm" title="Tải lẻ từng file ảnh">
+                                    🖼️ Tải Lẻ Ảnh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Dropzone phụ khi danh sách rỗng -->
+                        <div id="batch-empty-state" class="batch-empty-box">
+                            <div class="batch-empty-icon">📁</div>
+                            <h4 style="font-size: 16px; font-weight: 700; color: #334155; margin-bottom: 6px;">Chưa có bài làm nào được thêm</h4>
+                            <p style="font-size: 13px; color: #64748b; max-width: 530px; margin: 0 auto 16px;">Nhấn nút dưới đây hoặc kéo thả trực tiếp <strong>tệp ảnh bài kiểm tra</strong> hoặc <strong>1 file nén .ZIP</strong> chứa bài của cả lớp vào đây. Hệ thống tự động giải nén và phân loại từng học sinh.</p>
+                            <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                                <label class="btn btn-primary btn-sm" style="cursor: pointer; position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 6px;" title="Tải ảnh hoặc file .ZIP bài làm cả lớp">
+                                    📁 Chọn tệp ảnh hoặc file .ZIP
+                                    <input type="file" id="batch-empty-file-input" accept="image/*,.heic,.heif,.jfif,.zip,application/zip,application/x-zip-compressed" multiple style="position: absolute; inset: 0; opacity: 0; cursor: pointer;">
+                                </label>
+                                <button type="button" id="btn-batch-sample-demo-empty" class="btn btn-secondary btn-sm" style="border-color: #93c5fd; background: #f0f7ff; color: #1d4ed8; font-weight: 600;">
+                                    ✨ Tải bộ bài mẫu (3 học sinh)
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Bảng dữ liệu học sinh -->
+                        <div id="batch-table-wrapper" class="batch-table-wrapper hidden">
+                            <table class="batch-table" id="batch-students-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 48px; text-align: center;">STT</th>
+                                        <th style="min-width: 170px;">Học sinh</th>
+                                        <th style="width: 80px;">Lớp</th>
+                                        <th style="width: 90px; text-align: center;">Số trang</th>
+                                        <th style="width: 100px; text-align: center;">Điểm số</th>
+                                        <th style="width: 120px; text-align: center;">Xếp loại</th>
+                                        <th style="width: 140px; text-align: center;">Trạng thái</th>
+                                        <th style="min-width: 220px; text-align: right;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="batch-students-tbody">
+                                    <!-- Dynamic rows inject here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Khu vực Kết quả (Sprint 4 Dynamic AI Render) -->
+                <div id="result-section" class="result-area hidden">
+                    <!-- THANH CÔNG CỤ & ĐIỀU HƯỚNG CHẾ ĐỘ (GIÁO VIÊN / HỌC SINH) -->
+                    <div class="result-toolbar glass-card">
+                        <div class="view-mode-tabs">
+                            <button id="btn-mode-teacher" class="btn btn-sm btn-mode active" title="Hiển thị chi tiết đáp án chuẩn, ảnh crop, phân tích đối chiếu, confidence và công cụ giáo viên">
+                                👨‍🏫 Chế độ Giáo viên
+                            </button>
+                            <button id="btn-mode-student" class="btn btn-sm btn-mode" title="Hiển thị phiếu trả bài trực quan, trang nhã cho học sinh">
+                                🎓 Chế độ Học sinh (Phiếu trả bài)
+                            </button>
+                        </div>
+                        <div class="action-buttons-group">
+                            <button id="btn-preview-sheet" class="btn btn-outline btn-sm" title="Xem trước phiếu trả bài chuẩn A4 trước khi in hoặc xuất">
+                                👁️ Xem trước phiếu
+                            </button>
+                            <button id="btn-open-edit" class="btn btn-outline btn-sm" title="Giáo viên kiểm tra và sửa điểm, nhận xét">
+                                ✏️ Chỉnh sửa
+                            </button>
+                            <button id="btn-print-sheet" class="btn btn-outline btn-sm" title="In trực tiếp trang A4">
+                                🖨️ In
+                            </button>
+                            <button id="btn-export-pdf" class="btn btn-primary btn-sm" title="Xuất file PDF kết quả chuẩn A4">
+                                📄 Xuất PDF
+                            </button>
+                            <button id="btn-export-img" class="btn btn-outline btn-sm" title="Xuất file ảnh PNG gửi Zalo/Messenger">
+                                🖼️ Xuất ảnh
+                            </button>
+                            <button id="btn-copy-sheet-img" class="btn btn-outline btn-sm" title="Sao chép ảnh phiếu vào bộ nhớ tạm (dán trực tiếp Ctrl + V)">
+                                📋 Sao chép ảnh
+                            </button>
+                            <button id="btn-export-word" class="btn btn-outline btn-sm" title="Xuất file tài liệu Word (.doc)">
+                                📝 Xuất Word
+                            </button>
+                            <button id="btn-open-zalo-modal" class="btn btn-outline btn-sm" title="Soạn tin nhắn Zalo gửi phụ huynh với 1-chạm sao chép" style="background: #e0f2fe; color: #0284c7; border-color: #7dd3fc; font-weight: 700;">
+                                💬 Báo điểm Zalo
+                            </button>
+                            <button id="btn-toggle-red-pen" class="btn btn-outline btn-sm" title="Bật/Tắt công cụ bút đỏ giáo viên để khoanh tròn & đóng dấu nhận xét lên bài làm">
+                                🖍️ Bút đỏ sửa bài
+                            </button>
+                            <button id="btn-open-options" class="btn btn-secondary btn-sm" title="Tùy chọn nội dung khi xuất">
+                                ⚙️ Tùy chọn
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- THÔNG BÁO KẾT QUẢ ĐÃ ĐƯỢC GIÁO VIÊN CHỈNH SỬA -->
+                    <div id="teacher-edited-banner" class="teacher-edited-badge hidden">
+                        <span>✏️ <strong>Đã chỉnh sửa bởi giáo viên:</strong> Kết quả điểm số hoặc nhận xét dưới đây đã được giáo viên đối chiếu và cập nhật thủ công.</span>
+                    </div>
+
+                    <!-- THẺ THÔNG TIN HỌC SINH & BÀI LÀM -->
+                    <div id="student-info-card" class="student-info-box glass-card">
+                        <div class="info-card-header">
+                            <h4 class="info-card-title">
+                                📋 Thông tin phiếu trả bài
+                            </h4>
+                            <span class="info-card-hint">Tự động gắn vào file PDF / Ảnh / In</span>
+                        </div>
+                        <div class="info-inputs-grid">
+                            <div class="info-field">
+                                <label for="info-student-name">Học sinh:</label>
+                                <input type="text" id="info-student-name" class="form-input-sm" value="Nguyễn Văn A" placeholder="Tên học sinh...">
+                            </div>
+                            <div class="info-field">
+                                <label for="info-student-class">Lớp:</label>
+                                <input type="text" id="info-student-class" class="form-input-sm" value="8A" placeholder="Lớp...">
+                            </div>
+                            <div class="info-field">
+                                <label for="info-lesson-title">Bài kiểm tra:</label>
+                                <input type="text" id="info-lesson-title" class="form-input-sm" value="Bài kiểm tra Toán Đại số" placeholder="Tên bài làm...">
+                            </div>
+                            <div class="info-field">
+                                <label for="info-grading-date">Ngày chấm:</label>
+                                <input type="text" id="info-grading-date" class="form-input-sm" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- BẢNG ĐIỂM & ĐÁNH GIÁ TỔNG QUAN SƯ PHẠM CAO CẤP -->
+                    <div class="result-hero-card glass-card">
+                        <div class="result-hero-grid">
+                            <!-- Cột trái: Điểm số, Xếp loại, Thang điểm và Thống kê nhanh -->
+                            <div class="score-spotlight">
+                                <div class="score-display-wrapper">
+                                    <div class="score-circle-modern">
+                                        <span class="score-number" id="animated-score">0.0</span>
+                                        <span class="score-max">/ 10</span>
+                                    </div>
+                                    <div class="score-verdict-column">
+                                        <div id="score-verdict-badge" class="verdict-badge badge-neutral">
+                                            <span id="verdict-icon">🌟</span>
+                                            <span id="verdict-text">Đang tổng hợp...</span>
+                                        </div>
+                                        <div class="score-meter-box">
+                                            <div class="color-scale-bar" title="Thang điểm màu">
+                                                <div id="score-marker" class="color-scale-marker"></div>
+                                            </div>
+                                            <div class="scale-ticks">
+                                                <span>0</span>
+                                                <span>5</span>
+                                                <span>8</span>
+                                                <span>10</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Thống kê nhanh các bước -->
+                                <div class="quick-stats-row">
+                                    <div class="stat-item correct">
+                                        <span class="stat-num" id="stat-correct-steps">0</span>
+                                        <span class="stat-label">Bước đúng</span>
+                                    </div>
+                                    <div class="stat-item error">
+                                        <span class="stat-num" id="stat-error-steps">0</span>
+                                        <span class="stat-label">Cần sửa</span>
+                                    </div>
+                                    <div class="stat-item total">
+                                        <span class="stat-num" id="stat-total-questions">1</span>
+                                        <span class="stat-label">Câu hỏi</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Cột phải: Nhận xét sư phạm tổng quan -->
+                            <div class="pedagogical-summary-panel">
+                                <div class="summary-card-header">
+                                    <div class="summary-avatar-badge">👨‍🏫</div>
+                                    <div>
+                                        <h3 class="summary-heading">Nhận xét sư phạm tổng quan</h3>
+                                        <span class="summary-subheading">Đánh giá phương pháp & logic giải Toán</span>
+                                    </div>
+                                </div>
+                                <div class="summary-content-quote">
+                                    <div id="result-summary" class="summary-text-prose">...</div>
+                                </div>
+                                <div class="summary-guidance-pill" id="summary-guidance-pill">
+                                    <span class="guidance-icon">💡</span>
+                                    <span class="guidance-text">Xem chi tiết từng bước bên dưới để nhận biết lỗi đầu tiên và cách sửa chính xác.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- BẢNG MA TRẬN MỨC ĐỘ NĂNG LỰC THEO THÔNG TƯ 22 BỘ GD&ĐT -->
+                    <div id="matrix-competency-card" class="matrix-competency-card glass-card hidden">
+                        <div class="matrix-card-header">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 16px;">🎯</span>
+                                <h4 style="font-size: 14.5px; font-weight: 800; color: #1e293b; margin: 0;">Phân Bố Mức Độ Năng Lực Đề Bài (Theo Thông Tư 22 / Bộ GD&ĐT)</h4>
+                            </div>
+                            <span style="font-size: 11.5px; color: #64748b; font-weight: 600;">Chuẩn sư phạm THCS</span>
+                        </div>
+                        <div class="matrix-levels-grid">
+                            <div class="matrix-level-item matrix-level-nb">
+                                <div class="matrix-level-title">🟢 Nhận biết</div>
+                                <div class="matrix-level-stats"><strong id="matrix-cnt-nb">0</strong> câu (<span id="matrix-pts-nb">0</span> đ)</div>
+                                <div class="matrix-progress-track"><div id="matrix-bar-nb" class="matrix-progress-fill" style="width: 0%;"></div></div>
+                            </div>
+                            <div class="matrix-level-item matrix-level-th">
+                                <div class="matrix-level-title">🔵 Thông hiểu</div>
+                                <div class="matrix-level-stats"><strong id="matrix-cnt-th">0</strong> câu (<span id="matrix-pts-th">0</span> đ)</div>
+                                <div class="matrix-progress-track"><div id="matrix-bar-th" class="matrix-progress-fill" style="width: 0%;"></div></div>
+                            </div>
+                            <div class="matrix-level-item matrix-level-vd">
+                                <div class="matrix-level-title">🟠 Vận dụng</div>
+                                <div class="matrix-level-stats"><strong id="matrix-cnt-vd">0</strong> câu (<span id="matrix-pts-vd">0</span> đ)</div>
+                                <div class="matrix-progress-track"><div id="matrix-bar-vd" class="matrix-progress-fill" style="width: 0%;"></div></div>
+                            </div>
+                            <div class="matrix-level-item matrix-level-vdc">
+                                <div class="matrix-level-title">🔴 Vận dụng cao</div>
+                                <div class="matrix-level-stats"><strong id="matrix-cnt-vdc">0</strong> câu (<span id="matrix-pts-vdc">0</span> đ)</div>
+                                <div class="matrix-progress-track"><div id="matrix-bar-vdc" class="matrix-progress-fill" style="width: 0%;"></div></div>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Lưới hiển thị chi tiết (1 cột) -->
                     <div class="feedback-grid" style="grid-template-columns: 1fr;">
-                        
                         <!-- Danh sách từng câu -->
                         <div class="feedback-box">
-                            <h3 class="box-title">📋 Danh sách từng câu</h3>
+                            <h3 class="box-title">📋 Chi tiết kết quả từng câu</h3>
                             <div id="questions-list">
                                 <!-- Javascript Inject Danh sách câu hỏi -->
                             </div>
                         </div>
-                        
                     </div>
 
                     <!-- Nhận xét chung Overall -->
                     <div class="feedback-grid mt-3" style="grid-template-columns: 1fr;">
                         <div class="feedback-box">
-                            <h3 class="box-title">📝 Nhận xét chung</h3>
+                            <h3 class="box-title">📝 Đánh giá tổng hợp bài làm</h3>
                             <ul class="feedback-list" id="overall-feedback-list">
                                 <!-- Javascript Inject nhận xét -->
                             </ul>
                         </div>
                     </div>
 
-                    <div class="text-center" style="margin-top: 40px;">
+                    <!-- BÀI TẬP BỔ TRỢ CÁ NHÂN HÓA THEO LỖI SAI (MỤC 2) -->
+                    <div id="remedial-practice-card" class="remedial-practice-box glass-card hidden fade-in">
+                        <div class="remedial-card-header">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <span style="font-size: 24px;">🎯</span>
+                                <div>
+                                    <h3 class="remedial-card-title gradient-text" style="font-size: 17.5px; margin: 0;">Bài Tập Bổ Trợ Cá Nhân Hóa (Bù Đắp Lỗ Hổng Kiến Thức)</h3>
+                                    <span style="font-size: 12px; color: var(--text-secondary);">Tự động sinh bài toán tương tự theo đúng lỗi sai học sinh mắc phải để khắc phục điểm yếu</span>
+                                </div>
+                            </div>
+                            <div class="remedial-actions" style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <button type="button" id="btn-copy-remedial-text" class="btn btn-outline btn-sm" title="Sao chép toàn bộ bài tập bổ trợ để gửi Zalo cho phụ huynh hoặc học sinh">
+                                    📋 Sao chép bài tập (Gửi Zalo)
+                                </button>
+                                <button type="button" id="btn-toggle-all-remedial-solutions" class="btn btn-secondary btn-sm" title="Hiện hoặc ẩn toàn bộ lời giải chi tiết">
+                                    👁️ Hiện lời giải
+                                </button>
+                            </div>
+                        </div>
+                        <div id="remedial-questions-list" class="remedial-questions-container">
+                            <!-- Dynamic remedial questions inject here -->
+                        </div>
+                    </div>
+
+                    <div class="text-center" style="margin-top: 40px; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                        <button id="btn-regrade-current" class="btn btn-outline btn-large">🔄 Chấm lại bài này</button>
                         <button id="btn-reset-main" class="btn btn-primary btn-large">Chấm bài khác</button>
+                    </div>
+                </div>
+
+                <!-- BẢN IN / XUẤT FILE ẨN CHUẨN A4 CHO HỌC SINH -->
+                <div id="export-sheet-wrapper" class="hidden-print-export" style="display: none;">
+                    <div id="printable-student-sheet" class="printable-sheet">
+                        <!-- Nội dung sẽ được Javascript kết xuất động cho PDF / Ảnh / In -->
                     </div>
                 </div>
 
@@ -215,16 +668,404 @@
 
     <!-- MODAL XEM ẢNH GỐC / THU PHÓNG BÀI LÀM -->
     <div id="image-lightbox-modal" class="modal-overlay hidden fade-in">
-        <div class="modal-content glass-card slide-up" style="max-width: 800px; width: 95%; max-height: 90vh; display: flex; flex-direction: column;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 class="gradient-text" style="font-size: 18px; margin: 0;">📝 Ảnh bài làm của học sinh</h3>
-                <button id="btn-close-lightbox" class="btn btn-secondary" style="padding: 4px 12px; font-size: 14px;">✕ Đóng</button>
+        <div class="modal-content glass-card slide-up lightbox-modal-box">
+            <div class="lightbox-header">
+                <div>
+                    <h3 class="gradient-text" style="font-size: 17px; margin: 0;">📝 Ảnh bài làm gốc của học sinh</h3>
+                    <span id="lightbox-page-indicator" style="font-size: 12px; color: var(--text-secondary); font-weight: 600;">Trang 1/1</span>
+                </div>
+                <div class="lightbox-actions-bar">
+                    <button type="button" id="btn-lb-prev" class="btn btn-outline btn-sm" title="Trang trước">◀ Trước</button>
+                    <button type="button" id="btn-lb-next" class="btn btn-outline btn-sm" title="Trang sau">Sau ▶</button>
+                    <div class="lightbox-zoom-group">
+                        <button type="button" id="btn-lb-zoom-out" class="btn btn-secondary btn-sm" title="Thu nhỏ">🔍 -</button>
+                        <span id="lb-zoom-level" class="zoom-level-text">100%</span>
+                        <button type="button" id="btn-lb-zoom-in" class="btn btn-secondary btn-sm" title="Phóng to">🔍 +</button>
+                        <button type="button" id="btn-lb-zoom-reset" class="btn btn-outline btn-sm" title="Đặt lại kích thước">↺ 1:1</button>
+                    </div>
+                    <button type="button" id="btn-close-lightbox" class="btn btn-secondary btn-sm" style="padding: 4px 10px;">✕ Đóng</button>
+                </div>
             </div>
-            <div style="overflow: auto; flex: 1; border-radius: var(--radius-sm); background: #1e293b; padding: 10px; display: flex; justify-content: center; align-items: center;">
-                <img id="lightbox-full-img" src="" alt="Ảnh bài làm gốc" style="max-width: 100%; height: auto; border-radius: 4px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+            <div id="lightbox-scroll-container" class="lightbox-img-viewport">
+                <img id="lightbox-full-img" src="" alt="Ảnh bài làm gốc" class="lightbox-img-element">
             </div>
         </div>
     </div>
+
+    <!-- MODAL GIÁO VIÊN CHỈNH SỬA KẾT QUẢ CHẤM -->
+    <div id="teacher-edit-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up modal-large" style="max-width: 750px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <div>
+                    <h3 class="gradient-text" style="font-size: 18px; margin: 0;">✏️ Giáo viên chỉnh sửa kết quả chấm</h3>
+                    <span style="font-size: 12px; color: var(--text-secondary);">Bạn có thể điều chỉnh điểm số, trạng thái và lời phê trước khi xuất phiếu</span>
+                </div>
+                <button id="btn-close-edit-modal" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;">✕</button>
+            </div>
+            <div style="overflow-y: auto; flex: 1; padding-right: 8px;">
+                <!-- Điểm tổng & Đánh giá chung -->
+                <div style="display: grid; grid-template-columns: 140px 1fr; gap: 15px; margin-bottom: 15px;">
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">Điểm tổng (thang 10):</label>
+                        <input type="number" id="edit-total-score" class="form-input" min="0" max="10" step="0.25" style="font-size: 18px; font-weight: 800; color: var(--color-primary); text-align: center;">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 700; color: #1e293b; display: block; margin-bottom: 4px;">Tóm tắt đánh giá tổng quan:</label>
+                        <textarea id="edit-summary" class="form-input" rows="2" placeholder="Nhận xét ngắn tổng quan bài làm..."></textarea>
+                    </div>
+                </div>
+
+                <!-- Danh sách từng câu hỏi -->
+                <div style="margin-bottom: 15px;">
+                    <label style="font-size: 13px; font-weight: 800; color: #1e293b; display: block; margin-bottom: 8px;">Chi tiết từng câu hỏi:</label>
+                    <div id="edit-questions-list" style="display: flex; flex-direction: column; gap: 12px;">
+                        <!-- Javascript Inject Form chỉnh sửa từng câu -->
+                    </div>
+                </div>
+
+                <!-- Đánh giá chung: Điểm mạnh, Lỗi chính, Củng cố -->
+                <div style="border-top: 1px solid #e2e8f0; padding-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                    <label style="font-size: 13px; font-weight: 800; color: #1e293b;">Đánh giá tổng hợp bài làm:</label>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #15803d;">✓ Điểm mạnh (mỗi dòng một ý):</label>
+                        <textarea id="edit-strengths" class="form-input" rows="2" placeholder="Những điểm học sinh làm tốt..."></textarea>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #b91c1c;">⚠ Lỗi chính & Lỗi đầu tiên (mỗi dòng một ý):</label>
+                        <textarea id="edit-main-errors" class="form-input" rows="2" placeholder="Những lỗi cần khắc phục..."></textarea>
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #0284c7;">💡 Kiến thức cần củng cố (mỗi dòng một ý):</label>
+                        <textarea id="edit-knowledge-review" class="form-input" rows="2" placeholder="Lý thuyết và công thức cần ôn lại..."></textarea>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 15px; border-top: 1px solid #e2e8f0; padding-top: 12px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="btn-cancel-edit" class="btn btn-secondary">✕ Hủy</button>
+                <button id="btn-save-edit" class="btn btn-primary">💾 Lưu thay đổi & Cập nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TÙY CHỌN NỘI DUNG KHI XUẤT -->
+    <div id="export-options-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up" style="max-width: 540px; width: 95%; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <h3 class="gradient-text" style="font-size: 18px; margin: 0;">⚙️ Tùy chọn nội dung khi xuất phiếu</h3>
+                <button id="btn-close-options" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;">✕</button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 15px;">Chọn các mục bạn muốn hiển thị trên file PDF, Ảnh hoặc Bản in cho học sinh:</p>
+            <div style="display: flex; flex-direction: column; gap: 10px; font-size: 14px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="opt-total-score" checked> <strong>Điểm tổng</strong> (Vòng điểm và thang màu)
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="opt-question-scores" checked> <strong>Điểm từng câu</strong> & nhãn Đúng/Sai
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="opt-student-img" checked> <strong>Ảnh bài làm học sinh</strong> (Kèm vùng crop nét chữ)
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="opt-step-analysis" checked> <strong>Phân tích đối chiếu từng bước</strong>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="opt-first-error" checked> <strong>Đánh dấu Lỗi đầu tiên</strong> (🎯 Lỗi gốc quan trọng nhất)
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="opt-corrections" checked> <strong>Cách sửa & công thức chuẩn</strong>
+                </label>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="opt-overall-feedback" checked> <strong>Nhận xét chung & Củng cố kiến thức</strong>
+                </label>
+                <hr style="border: none; border-top: 1px dashed #e2e8f0; margin: 5px 0;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: var(--color-primary); font-weight: 600;">
+                    <input type="checkbox" id="opt-reference-solution"> 📘 <strong>Hiển thị toàn bộ Đáp án chuẩn do AI tự giải</strong>
+                </label>
+                <span style="font-size: 11px; color: var(--text-secondary); margin-left: 24px;">(Mặc định tắt trên phiếu trả bài học sinh để bài gọn gàng, bật khi giáo viên muốn học sinh tham khảo lời giải mẫu)</span>
+
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; color: #16a34a; font-weight: 600; margin-top: 4px;">
+                    <input type="checkbox" id="opt-remedial-exercises" checked> 🎯 <strong>Kèm bài tập bổ trợ cá nhân hóa theo lỗi sai</strong>
+                </label>
+                <span style="font-size: 11px; color: var(--text-secondary); margin-left: 24px;">(Tự động in kèm 1-2 bài tập tương tự bám sát câu học sinh làm sai kèm gợi ý tư duy)</span>
+                
+                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 8px 0;">
+                <div>
+                    <strong style="font-size: 13px; color: #1e293b; display: block; margin-bottom: 6px;">🖼️ Định dạng xuất ảnh PNG:</strong>
+                    <div style="display: flex; gap: 14px; font-size: 13px;">
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="radio" name="opt-img-format" value="long" checked id="opt-img-long">
+                            <span>Ảnh dài tổng hợp (tiện xem Zalo/điện thoại)</span>
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                            <input type="radio" name="opt-img-format" value="paged" id="opt-img-paged">
+                            <span>Từng trang chuẩn A4</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button id="btn-save-options" class="btn btn-primary w-100">💾 Áp dụng & Lưu tùy chọn</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL XEM TRƯỚC PHIẾU CHẤM (PREVIEW SHEET MODAL) -->
+    <div id="preview-sheet-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up preview-sheet-box">
+            <div class="preview-sheet-header">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 20px;">👁️</span>
+                    <div>
+                        <h3 class="gradient-text" style="font-size: 18px; margin: 0;">Xem Trước Phiếu Trả Bài Chuẩn A4</h3>
+                        <span style="font-size: 12px; color: var(--text-secondary);">Kiểm tra bố cục, KaTeX và lời phê trước khi xuất</span>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <button type="button" id="btn-preview-modal-copy" class="btn btn-outline btn-sm" title="Sao chép ảnh phiếu vào clipboard">
+                        📋 Sao chép ảnh
+                    </button>
+                    <button type="button" id="btn-preview-modal-img" class="btn btn-outline btn-sm" title="Tải file ảnh PNG">
+                        🖼️ Tải ảnh
+                    </button>
+                    <button type="button" id="btn-preview-modal-pdf" class="btn btn-primary btn-sm" title="Tải file PDF A4">
+                        📄 Tải PDF
+                    </button>
+                    <button type="button" id="btn-preview-modal-print" class="btn btn-secondary btn-sm" title="In trực tiếp">
+                        🖨️ In
+                    </button>
+                    <button type="button" id="btn-preview-modal-close" class="btn btn-secondary btn-sm" style="padding: 4px 10px;">✕</button>
+                </div>
+            </div>
+            <div class="preview-sheet-body" id="preview-sheet-container">
+                <!-- Injected printable sheet cloned for preview -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CHỈNH SỬA THÔNG TIN & ĐIỂM SỐ HỌC SINH TRONG BẢNG HÀNG LOẠT -->
+    <div id="batch-edit-student-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up" style="max-width: 480px; width: 95%; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px;">
+                <h3 class="gradient-text" style="font-size: 17px; margin: 0;">✏️ Sửa Thông Tin & Điểm Số</h3>
+                <button type="button" id="btn-close-batch-edit" class="btn btn-secondary" style="padding: 3px 8px; font-size: 13px;">✕</button>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 12px;">
+                <input type="hidden" id="batch-edit-student-id">
+                <div>
+                    <label style="font-size: 12px; font-weight: 600; color: #475569;">Họ và tên học sinh:</label>
+                    <input type="text" id="batch-edit-student-name" class="form-input">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #475569;">Lớp:</label>
+                        <input type="text" id="batch-edit-student-class" class="form-input">
+                    </div>
+                    <div>
+                        <label style="font-size: 12px; font-weight: 600; color: #475569;">Điểm số (0 - 10):</label>
+                        <input type="number" id="batch-edit-student-score" class="form-input" min="0" max="10" step="0.25">
+                    </div>
+                </div>
+                <div>
+                    <label style="font-size: 12px; font-weight: 600; color: #475569;">Lời phê & Nhận xét sư phạm:</label>
+                    <textarea id="batch-edit-student-summary" class="form-input" rows="3" placeholder="Nhận xét của giáo viên..."></textarea>
+                </div>
+            </div>
+            <div style="margin-top: 16px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" id="btn-cancel-batch-edit" class="btn btn-secondary">✕ Hủy</button>
+                <button type="button" id="btn-save-batch-edit" class="btn btn-primary">💾 Cập nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL LỊCH SỬ CHẤM BÀI -->
+    <div id="history-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up modal-large" style="max-width: 820px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <h3 class="gradient-text" style="font-size: 18px; margin: 0;">📜 Lịch sử chấm bài</h3>
+                    <span id="history-total-count" style="font-size: 12px; background: #e0e7ff; color: #3730a3; padding: 2px 10px; border-radius: 12px; font-weight: 700;">0 bài</span>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <button type="button" id="btn-clear-all-history" class="btn btn-danger btn-sm" title="Xóa toàn bộ lịch sử đã lưu">🗑 Xóa toàn bộ</button>
+                    <button type="button" id="btn-close-history" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;">✕</button>
+                </div>
+            </div>
+            
+            <!-- Ô tìm kiếm lịch sử -->
+            <div style="margin-bottom: 12px;">
+                <input type="text" id="history-search-input" class="form-input" placeholder="🔍 Tìm kiếm bài chấm theo tên học sinh, lớp, tiêu đề bài kiểm tra, hoặc ngày (vd: 25/09/2026)...">
+            </div>
+
+            <!-- Danh sách các bài đã chấm -->
+            <div id="history-list-container" style="overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; padding-right: 6px;">
+                <!-- History cards injected here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CÀI ĐẶT TÊN TRƯỜNG & THẦY CÔ HIỂN THỊ TRÊN PHIẾU CHẤM -->
+    <div id="branding-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up" style="max-width: 520px; width: 95%; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <h3 class="gradient-text" style="font-size: 18px; margin: 0;">🏫 Cài Đặt Trường Học & Giáo Viên</h3>
+                <button type="button" id="btn-close-branding" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;">✕</button>
+            </div>
+            <p style="font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 16px;">
+                Thông tin này sẽ được in trang trọng lên tiêu đề và khung chữ ký của mọi phiếu chấm điểm khi xuất PDF, Ảnh hoặc In ra giấy A4.
+            </p>
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+                <div>
+                    <label style="font-size: 12.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Tên trường / Cơ sở đào tạo:</label>
+                    <input type="text" id="branding-school-name" class="form-input" placeholder="VD: Trường THCS Giảng Võ - Ba Đình, Hà Nội">
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Giáo viên chấm bài:</label>
+                        <input type="text" id="branding-teacher-name" class="form-input" placeholder="VD: Thầy Trần Matsuda">
+                    </div>
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Tổ / Bộ môn:</label>
+                        <input type="text" id="branding-department" class="form-input" placeholder="VD: Tổ Toán - Tin học">
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Niên khóa / Học kỳ:</label>
+                        <input type="text" id="branding-academic-year" class="form-input" placeholder="VD: Năm học 2025 - 2026">
+                    </div>
+                    <div>
+                        <label style="font-size: 12.5px; font-weight: 700; color: #334155; display: block; margin-bottom: 4px;">Tiêu ngữ / Khẩu hiệu:</label>
+                        <input type="text" id="branding-slogan" class="form-input" placeholder="VD: Tư duy logic • Vững bước tương lai">
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 10px 12px; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <input type="checkbox" id="branding-show-stamp" style="width: 18px; height: 18px; cursor: pointer;" checked>
+                    <label for="branding-show-stamp" style="font-size: 13px; font-weight: 600; color: #1e293b; cursor: pointer;">
+                        Đóng dấu mộc đỏ kiểm duyệt sư phạm (ĐÃ KIỂM TRA ĐIỂM SỐ)
+                    </label>
+                </div>
+            </div>
+            <div style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" id="btn-reset-branding" class="btn btn-secondary">Khôi phục mặc định</button>
+                <button type="button" id="btn-save-branding" class="btn btn-primary">💾 Lưu cài đặt</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DANH SÁCH PHÍM TẮT THÔNG MINH CHO GIÁO VIÊN -->
+    <div id="hotkeys-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up" style="max-width: 540px; width: 95%; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">⌨️</span>
+                    <h3 class="gradient-text" style="font-size: 18px; margin: 0;">Phím Tắt Tiện Ích Cho Giáo Viên</h3>
+                </div>
+                <button type="button" id="btn-close-hotkeys" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;">✕</button>
+            </div>
+            <p style="font-size: 13px; color: #64748b; margin-top: 0; margin-bottom: 14px;">
+                Sử dụng các tổ hợp phím tắt dưới đây để tăng tốc tối đa quá trình chấm bài và xuất kết quả:
+            </p>
+            <div class="hotkeys-list">
+                <div class="hotkey-row">
+                    <div class="hotkey-keys"><kbd>Ctrl</kbd> + <kbd>Enter</kbd></div>
+                    <div class="hotkey-desc"><strong>Bắt đầu chấm bài:</strong> Kích hoạt chấm bài ngay (ở chế độ bài đơn hoặc hàng loạt)</div>
+                </div>
+                <div class="hotkey-row">
+                    <div class="hotkey-keys"><kbd>Ctrl</kbd> + <kbd>P</kbd></div>
+                    <div class="hotkey-desc"><strong>In phiếu điểm:</strong> Mở ngay lệnh In phiếu A4 chuẩn hoặc xem trước phiếu</div>
+                </div>
+                <div class="hotkey-row">
+                    <div class="hotkey-keys"><kbd>Ctrl</kbd> + <kbd>S</kbd></div>
+                    <div class="hotkey-desc"><strong>Xuất & Lưu kết quả:</strong> Tải PDF phiếu chấm (hoặc xuất file Excel sổ điểm cả lớp)</div>
+                </div>
+                <div class="hotkey-row">
+                    <div class="hotkey-keys"><kbd>Ctrl</kbd> + <kbd>V</kbd></div>
+                    <div class="hotkey-desc"><strong>Dán ảnh nhanh:</strong> Dán ảnh chụp bài làm trực tiếp từ bộ nhớ tạm Clipboard</div>
+                </div>
+                <div class="hotkey-row">
+                    <div class="hotkey-keys"><kbd>Esc</kbd></div>
+                    <div class="hotkey-desc"><strong>Đóng cửa sổ:</strong> Đóng nhanh mọi hộp thoại / modal đang hiển thị</div>
+                </div>
+                <div class="hotkey-row">
+                    <div class="hotkey-keys"><kbd>F1</kbd> hoặc <kbd>?</kbd></div>
+                    <div class="hotkey-desc"><strong>Trợ giúp:</strong> Mở bảng tra cứu phím tắt này bất kỳ lúc nào</div>
+                </div>
+            </div>
+            <div style="margin-top: 20px; display: flex; justify-content: flex-end;">
+                <button type="button" id="btn-confirm-hotkeys" class="btn btn-primary">Đã hiểu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL TRA CỨU ĐÁP ÁN & LỜI GIẢI QUA MÃ QR CODE -->
+    <div id="qr-lookup-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up modal-large" style="max-width: 680px; width: 95%; max-height: 90vh; display: flex; flex-direction: column; text-align: left;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; border-bottom: 1px solid #e2e8f0; padding-bottom: 10px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 20px;">📱</span>
+                    <h3 class="gradient-text" style="font-size: 18px; margin: 0;">Tra Cứu Lời Giải & Đáp Án Trực Tuyến</h3>
+                </div>
+                <button type="button" id="btn-close-qr-lookup" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px;">✕</button>
+            </div>
+            <div id="qr-lookup-body" style="overflow-y: auto; flex: 1; padding-right: 4px; display: flex; flex-direction: column; gap: 12px;">
+                <!-- Injected student verification & reference solutions -->
+            </div>
+            <div style="margin-top: 14px; border-top: 1px solid #e2e8f0; padding-top: 10px; display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" id="btn-confirm-qr-lookup" class="btn btn-primary">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MỤC 4: MODAL SOẠN TIN NHẮN ZALO BÁO ĐIỂM CHO PHỤ HUYNH -->
+    <div id="zalo-message-modal" class="modal-overlay hidden fade-in">
+        <div class="zalo-modal-card slide-up">
+            <div class="zalo-modal-header">
+                <div class="zalo-logo-badge">
+                    <span class="zalo-logo-icon">Z</span>
+                    <span>Soạn Tin Nhắn Zalo Báo Điểm Cho Phụ Huynh</span>
+                </div>
+                <button type="button" id="btn-close-zalo-modal" class="btn btn-secondary" style="padding: 4px 10px; font-size: 14px; background: rgba(255,255,255,0.2); border: none; color: #ffffff;">✕</button>
+            </div>
+            
+            <div class="zalo-tones-bar">
+                <span style="font-size: 12px; font-weight: 700; color: #475569; align-self: center; margin-right: 4px;">Giọng điệu:</span>
+                <button type="button" class="btn-zalo-tone active" data-tone="encouraging" title="Lời chào ấm áp, biểu dương ưu điểm trước, dặn dò tế nhị điểm cần rèn luyện">
+                    🌸 Động viên & Sư phạm
+                </button>
+                <button type="button" class="btn-zalo-tone" data-tone="concise" title="Ngắn gọn, súc tích dành cho phụ huynh bận rộn">
+                    ⚡ Ngắn gọn & Nhanh
+                </button>
+                <button type="button" class="btn-zalo-tone" data-tone="detailed" title="Chi tiết từng câu, điểm số và bài tập bổ trợ tại nhà">
+                    🎯 Chi tiết & Kèm bài tập
+                </button>
+            </div>
+
+            <div class="zalo-preview-box">
+                <textarea id="zalo-message-textarea" class="zalo-preview-textarea" placeholder="Nội dung tin nhắn Zalo..."></textarea>
+                <div class="zalo-preview-hint">
+                    <span>💡 Thầy/cô có thể chỉnh sửa trực tiếp vào khung trên trước khi bấm gửi.</span>
+                    <span id="zalo-char-count">0 ký tự</span>
+                </div>
+            </div>
+
+            <div class="zalo-actions-footer">
+                <div style="display: flex; gap: 8px;">
+                    <a id="btn-open-zalo-web" href="https://chat.zalo.me" target="_blank" rel="noopener noreferrer" class="btn-zalo-web" title="Mở trang web Zalo trên trình duyệt">
+                        🌐 Mở Zalo Web
+                    </a>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" id="btn-cancel-zalo" class="btn btn-secondary">Đóng</button>
+                    <button type="button" id="btn-copy-zalo-text" class="btn-zalo-copy" title="Sao chép toàn bộ tin nhắn vào bộ nhớ tạm">
+                        📋 Sao chép tin nhắn Zalo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONTAINER HIỂN THỊ THÔNG BÁO TOAST -->
+    <div id="toast-container" aria-live="polite"></div>
 
     <script src="assets/js/main.js"></script>
 </body>
