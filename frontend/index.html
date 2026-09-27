@@ -26,8 +26,10 @@
     <link rel="stylesheet" href="assets/css/style.css">
     
     <!-- PWA Web App Manifest & Mobile Theme -->
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/icons/favicon-32.png">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/app-logo.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/icons/apple-touch-icon.png">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="assets/icons/apple-touch-icon.png">
     <meta name="theme-color" content="#2563eb">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
@@ -39,8 +41,8 @@
     <header class="header glass-nav">
         <div class="header-container">
             <div class="logo">
-                <span class="logo-icon">📐</span>
-                TOÁN <span class="gradient-text">MATSUDA AI</span>
+                <img src="assets/icons/app-logo.png" alt="Logo Toán Matsuda AI" class="brand-logo-img">
+                <span class="logo-title-group">TOÁN <span class="gradient-text">MATSUDA AI</span></span>
             </div>
             <nav class="navbar">
                 <a href="#" class="nav-link active">Trang chủ</a>
@@ -64,9 +66,12 @@
     <main>
         <!-- HERO SECTION -->
         <section class="hero">
+            <div class="hero-brand-badge-container">
+                <img src="assets/icons/app-logo.png" alt="Logo Toán Matsuda AI" class="hero-brand-logo-img">
+            </div>
             <div class="hero-content">
-                <h1 class="hero-title">TOÁN MATSUDA AI</h1>
-                <p class="hero-subtitle">Nền tảng AI hỗ trợ giáo viên và học sinh học Toán.</p>
+                <h1 class="hero-title">TOÁN <span class="gradient-text">MATSUDA AI</span></h1>
+                <p class="hero-subtitle">Nền tảng Trí tuệ Nhân tạo hỗ trợ giáo viên và học sinh học Toán THCS.</p>
             </div>
         </section>
 
@@ -625,13 +630,6 @@
                     </div>
                 </div>
 
-                <!-- BẢN IN / XUẤT FILE ẨN CHUẨN A4 CHO HỌC SINH -->
-                <div id="export-sheet-wrapper" class="hidden-print-export" style="display: none;">
-                    <div id="printable-student-sheet" class="printable-sheet">
-                        <!-- Nội dung sẽ được Javascript kết xuất động cho PDF / Ảnh / In -->
-                    </div>
-                </div>
-
             </div>
         </section>
     </main>
@@ -640,7 +638,8 @@
     <footer class="footer">
         <div class="footer-content">
             <div class="footer-logo">
-                <span class="logo-icon">📐</span> TOÁN MATSUDA
+                <img src="assets/icons/app-logo.png" alt="Logo Toán Matsuda AI" class="footer-logo-img">
+                <span>TOÁN <span class="gradient-text">MATSUDA AI</span></span>
             </div>
             <div class="footer-info">
                 <p>&copy; 2026 Toán Matsuda. All rights reserved.</p>
@@ -1061,6 +1060,13 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- BẢN IN / XUẤT FILE ẨN CHUẨN A4 CHO HỌC SINH (NẰM TRỰC TIẾP TRÊN BODY ĐỂ KHÔNG BỊ TRÔI LỀ TRÊN) -->
+    <div id="export-sheet-wrapper" class="hidden-print-export" style="display: none;">
+        <div id="printable-student-sheet" class="printable-sheet">
+            <!-- Nội dung sẽ được Javascript kết xuất động cho PDF / Ảnh / In -->
         </div>
     </div>
 

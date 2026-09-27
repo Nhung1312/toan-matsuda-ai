@@ -40,7 +40,34 @@ body { background-color: var(--bg-main); color: var(--text-primary); line-height
 /* --- HEADER --- */
 .header { position: fixed; top: 0; width: 100%; z-index: 1000; }
 .header-container { max-width: 1200px; margin: 0 auto; padding: 15px 24px; display: flex; justify-content: space-between; align-items: center; }
-.logo { font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 8px; letter-spacing: -0.5px; }
+.logo { font-size: 22px; font-weight: 800; display: flex; align-items: center; gap: 10px; letter-spacing: -0.5px; }
+.brand-logo-img {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    object-fit: contain;
+    transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    flex-shrink: 0;
+}
+.brand-logo-img:hover {
+    transform: scale(1.12) rotate(-3deg);
+}
+.footer-logo {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 16px;
+    font-weight: 800;
+}
+.footer-logo-img {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    object-fit: contain;
+    flex-shrink: 0;
+}
 .navbar { display: flex; gap: 30px; }
 .nav-link { text-decoration: none; color: var(--text-secondary); font-weight: 500; font-size: 15px; transition: var(--transition); }
 .nav-link:hover, .nav-link.active { color: var(--text-primary); }
@@ -48,7 +75,31 @@ body { background-color: var(--bg-main); color: var(--text-primary); line-height
 main { padding-top: 80px; }
 
 /* --- HERO SECTION --- */
-.hero { padding: 60px 20px 20px; text-align: center; }
+.hero { padding: 40px 20px 20px; text-align: center; }
+.hero-brand-badge-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.hero-brand-logo-img {
+    width: 86px;
+    height: 86px;
+    border-radius: 22px;
+    box-shadow: 0 12px 32px rgba(37, 99, 235, 0.35), 0 4px 12px rgba(0, 0, 0, 0.08);
+    object-fit: contain;
+    border: 2px solid rgba(255, 255, 255, 0.9);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    animation: floatLogo 4s ease-in-out infinite;
+}
+.hero-brand-logo-img:hover {
+    transform: scale(1.1) translateY(-6px) rotate(-3deg);
+    box-shadow: 0 18px 40px rgba(37, 99, 235, 0.45);
+}
+@keyframes floatLogo {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-7px); }
+}
 .hero-title { font-size: 42px; font-weight: 800; line-height: 1.2; letter-spacing: -1.5px; margin-bottom: 10px; }
 .hero-subtitle { font-size: 18px; color: var(--text-secondary); max-width: 600px; margin: 0 auto; }
 
@@ -319,7 +370,6 @@ main { padding-top: 80px; }
 /* ======================================================== */
 /* KHUNG IN & XUẤT PDF / ẢNH (A4 PRINTABLE SHEET) */
 /* ======================================================== */
-.printable-sheet { background: #ffffff; color: #0f172a; padding: 25px 30px; font-family: 'Inter', sans-serif; font-size: 13px; line-height: 1.5; max-width: 800px; margin: 0 auto; box-sizing: border-box; }
 .ps-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #2563eb; padding-bottom: 12px; margin-bottom: 15px; }
 .ps-logo { font-size: 18px; font-weight: 800; color: #2563eb; display: flex; align-items: center; gap: 6px; }
 .ps-title { font-size: 16px; font-weight: 800; text-align: right; color: #1e293b; }
@@ -338,16 +388,6 @@ main { padding-top: 80px; }
 
 .ps-general-comment { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 6px; padding: 12px; margin-top: 15px; page-break-inside: avoid; }
 .ps-gc-title { font-weight: 700; font-size: 13px; color: #1e293b; margin-bottom: 6px; }
-
-/* CSS KHI BẤM IN (CTRL+P / NÚT IN) */
-@media print {
-    body { background: #ffffff !important; }
-    .header, .hero, .features, .upload-container, .result-toolbar, .student-info-box, .footer, .text-center, .modal-overlay { display: none !important; }
-    .main-content, .container { padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
-    #result-section { display: none !important; }
-    #export-sheet-wrapper { display: block !important; }
-    .printable-sheet { padding: 0 !important; box-shadow: none !important; border: none !important; }
-}
 
 /* ======================================================== */
 /* ĐỢT 2: QUẢN LÝ NHIỀU ẢNH / XOAY ẢNH / LỊCH SỬ CHẤM BÀI */
@@ -877,32 +917,67 @@ main { padding-top: 80px; }
     font-size: 12px;
 }
 
+/* Khung cố định nằm độc lập ngoài body để html2canvas chụp đúng mép trên cùng (không bị cuộn/trôi lề) */
+#export-sheet-wrapper {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 794px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    z-index: -9999 !important;
+    box-sizing: border-box !important;
+    pointer-events: none !important;
+}
+
+#export-sheet-wrapper .printable-sheet {
+    width: 794px !important;
+    max-width: 794px !important;
+    margin: 0 auto !important;
+    padding: 3mm 8mm 5mm 8mm !important; /* Lề trên siêu chuẩn 3mm kết hợp với margin html2pdf 4mm = đúng 7mm đầu trang */
+    box-sizing: border-box !important;
+    background: #ffffff !important;
+    box-shadow: none !important;
+    border: none !important;
+}
+
 @page {
     size: A4 portrait;
-    margin: 6mm 8mm;
+    margin: 4mm 6mm;
 }
 
 @media print {
+    body {
+        background: #ffffff !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
     body * {
-        visibility: hidden;
+        visibility: hidden !important;
     }
     #export-sheet-wrapper,
     #export-sheet-wrapper * {
-        visibility: visible;
+        visibility: visible !important;
     }
     #export-sheet-wrapper {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
         display: block !important;
-        margin: 0;
-        padding: 0;
+        margin: 0 !important;
+        padding: 0 !important;
+        z-index: 99999 !important;
     }
-    .printable-sheet {
+    #export-sheet-wrapper .printable-sheet {
+        width: 100% !important;
+        max-width: 100% !important;
         box-shadow: none !important;
         border: none !important;
-        padding: 6mm 8mm !important;
+        padding: 3mm 6mm !important;
+        margin: 0 !important;
     }
     .ps-step-avoid,
     .ps-signatures-block,

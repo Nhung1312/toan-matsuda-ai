@@ -1,0 +1,230 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradients -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="30%" stop-color="#2563eb"/>
+      <stop offset="70%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="glossGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.45"/>
+      <stop offset="40%" stop-color="#ffffff" stop-opacity="0.05"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+    
+    <!-- Text Gradients -->
+    <linearGradient id="white3d" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="60%" stop-color="#f1f5f9"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <linearGradient id="gold3d" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="35%" stop-color="#facc15"/>
+      <stop offset="75%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#ca8a04"/>
+    </linearGradient>
+    <linearGradient id="goldExtrude" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#b45309"/>
+      <stop offset="100%" stop-color="#78350f"/>
+    </linearGradient>
+    <linearGradient id="cyanBadge" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+    <linearGradient id="robotHead" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="80%" stop-color="#e2e8f0"/>
+      <stop offset="100%" stop-color="#cbd5e1"/>
+    </linearGradient>
+    <linearGradient id="robotScreen" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+
+    <!-- Filters -->
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="glowYellow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Base Icon Squircle -->
+  <rect x="16" y="16" width="480" height="480" rx="108" fill="url(#bgGrad)" stroke="#60a5fa" stroke-width="6" filter="url(#dropShadow)"/>
+
+  <!-- Glossy Overlay -->
+  <path d="M 22 124 C 22 64 64 22 124 22 L 388 22 C 448 22 490 64 490 124 L 490 180 C 340 160 170 200 22 280 Z" fill="url(#glossGrad)"/>
+
+  <!-- Background Math Symbols Floating -->
+  <g fill="#93c5fd" opacity="0.35" font-family="'Plus Jakarta Sans', sans-serif" font-weight="800">
+    <text x="420" y="75" font-size="24">a²+b²=c²</text>
+    <text x="445" y="145" font-size="44">√</text>
+    <text x="450" y="200" font-size="36">π</text>
+    <text x="450" y="250" font-size="38" fill="#fde047" opacity="0.75">+</text>
+  </g>
+
+  <!-- Top-Left Math Test Paper with Red Circle 10 Score -->
+  <g transform="translate(130, 35) rotate(-6)">
+    <!-- Sheet shadow & body -->
+    <rect x="0" y="0" width="160" height="150" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="3" filter="url(#dropShadow)"/>
+    <!-- Formula header -->
+    <text x="18" y="32" font-family="sans-serif" font-size="20" font-weight="bold" fill="#2563eb">√a²+b²</text>
+    <!-- Multiple choice lines -->
+    <line x1="20" y1="52" x2="65" y2="52" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+    <polyline points="72,50 76,54 86,46" fill="none" stroke="#ef4444" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="20" y1="72" x2="65" y2="72" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+    <polyline points="72,70 76,74 86,66" fill="none" stroke="#ef4444" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="20" y1="92" x2="65" y2="92" stroke="#94a3b8" stroke-width="4" stroke-linecap="round"/>
+    <polyline points="72,90 76,94 86,86" fill="none" stroke="#ef4444" stroke-width="3.5" stroke-linecap="round"/>
+    <!-- Red Circle 10 Stamp -->
+    <circle cx="120" cy="40" r="24" fill="none" stroke="#ef4444" stroke-width="4.5"/>
+    <text x="120" y="47" font-family="sans-serif" font-size="22" font-weight="900" fill="#ef4444" text-anchor="middle">10</text>
+  </g>
+
+  <!-- Geometry Tools: Triangle Ruler (Blue) & Compass (Yellow) -->
+  <g transform="translate(42, 85)">
+    <!-- Triangle Ruler -->
+    <polygon points="0,0 80,0 80,120" fill="#38bdf8" fill-opacity="0.3" stroke="#38bdf8" stroke-width="5" stroke-linejoin="round"/>
+    <polygon points="20,18 64,18 64,84" fill="#1d4ed8" fill-opacity="0.3" stroke="#38bdf8" stroke-width="3"/>
+    <line x1="80" y1="20" x2="72" y2="20" stroke="#ffffff" stroke-width="3"/>
+    <line x1="80" y1="40" x2="72" y2="40" stroke="#ffffff" stroke-width="3"/>
+    <line x1="80" y1="60" x2="72" y2="60" stroke="#ffffff" stroke-width="3"/>
+    <line x1="80" y1="80" x2="72" y2="80" stroke="#ffffff" stroke-width="3"/>
+  </g>
+
+  <!-- Drafting Compass (Yellow) -->
+  <g transform="translate(50, 140)">
+    <circle cx="20" cy="15" r="10" fill="#facc15" stroke="#ca8a04" stroke-width="3"/>
+    <line x1="20" y1="25" x2="6" y2="135" stroke="#facc15" stroke-width="8" stroke-linecap="round"/>
+    <line x1="20" y1="25" x2="36" y2="120" stroke="#facc15" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="6" cy="135" r="3.5" fill="#475569"/>
+    <polygon points="34,120 40,120 37,135" fill="#475569"/>
+    <circle cx="20" cy="55" r="7" fill="#e2e8f0" stroke="#94a3b8" stroke-width="2"/>
+  </g>
+
+  <!-- Robot Mascot Head (Top-Right) -->
+  <g transform="translate(290, 48)">
+    <!-- Blue Headset arc -->
+    <path d="M 0 65 A 72 72 0 0 1 144 65" fill="none" stroke="#2563eb" stroke-width="14" stroke-linecap="round"/>
+    <!-- Headset Ear pads -->
+    <rect x="-14" y="55" width="22" height="42" rx="10" fill="#3b82f6" stroke="#1d4ed8" stroke-width="4"/>
+    <rect x="136" y="55" width="22" height="42" rx="10" fill="#3b82f6" stroke="#1d4ed8" stroke-width="4"/>
+    
+    <!-- White Glossy Robot Head -->
+    <rect x="0" y="15" width="144" height="115" rx="44" fill="url(#robotHead)" stroke="#cbd5e1" stroke-width="4" filter="url(#dropShadow)"/>
+    
+    <!-- Dark Glossy Visor Screen -->
+    <rect x="16" y="32" width="112" height="78" rx="28" fill="url(#robotScreen)" stroke="#38bdf8" stroke-width="2.5"/>
+    
+    <!-- Glowing Cyan Smiling LED Eyes ^_^ -->
+    <path d="M 36 70 Q 52 50 68 70" fill="none" stroke="#38bdf8" stroke-width="6.5" stroke-linecap="round" filter="url(#glowCyan)"/>
+    <path d="M 76 70 Q 92 50 108 70" fill="none" stroke="#38bdf8" stroke-width="6.5" stroke-linecap="round" filter="url(#glowCyan)"/>
+    <circle cx="52" cy="74" r="3.5" fill="#e0f2fe"/>
+    <circle cx="92" cy="74" r="3.5" fill="#e0f2fe"/>
+  </g>
+
+  <!-- Bottom-Right Open Textbook -->
+  <g transform="translate(370, 395) rotate(-10)">
+    <polygon points="0,15 50,0 100,15 100,60 50,45 0,60" fill="#3b82f6" stroke="#1d4ed8" stroke-width="4"/>
+    <polygon points="5,13 48,2 48,42 5,53" fill="#ffffff"/>
+    <polygon points="52,2 95,13 95,53 52,42" fill="#f8fafc"/>
+    <line x1="12" y1="20" x2="40" y2="12" stroke="#94a3b8" stroke-width="2"/>
+    <line x1="12" y1="28" x2="40" y2="20" stroke="#94a3b8" stroke-width="2"/>
+    <line x1="12" y1="36" x2="40" y2="28" stroke="#94a3b8" stroke-width="2"/>
+    <line x1="60" y1="12" x2="88" y2="20" stroke="#94a3b8" stroke-width="2"/>
+    <line x1="60" y1="20" x2="88" y2="28" stroke="#94a3b8" stroke-width="2"/>
+  </g>
+
+  <!-- Bottom-Left Right Triangle Geometry with Labels A, B, C -->
+  <g transform="translate(42, 385)">
+    <polygon points="10,65 75,65 10,10" fill="none" stroke="#ffffff" stroke-width="3.5" stroke-linejoin="round"/>
+    <rect x="10" y="55" width="10" height="10" fill="none" stroke="#ffffff" stroke-width="2"/>
+    <text x="4" y="8" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff">A</text>
+    <text x="0" y="80" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff">B</text>
+    <text x="80" y="75" font-family="sans-serif" font-size="14" font-weight="bold" fill="#ffffff">C</text>
+  </g>
+
+  <!-- ============================================== -->
+  <!-- CENTER 3D TYPOGRAPHY BADGE: TOÁN MATSUDA AI -->
+  <!-- ============================================== -->
+  
+  <!-- Outer Deep Blue 3D Badge Cloud Frame -->
+  <g filter="url(#dropShadow)">
+    <path d="M 120 185 
+             C 120 155 170 145 256 145 
+             C 342 145 392 155 392 185 
+             C 430 190 450 230 450 270 
+             C 450 315 415 345 375 350 
+             C 385 385 360 435 256 435 
+             C 152 435 127 385 137 350 
+             C 97 345 62 315 62 270 
+             C 62 230 82 190 120 185 Z" 
+          fill="#1e3a8a" stroke="#60a5fa" stroke-width="6"/>
+    <!-- Inner Deep Layer -->
+    <path d="M 124 190 
+             C 124 162 172 152 256 152 
+             C 340 152 388 162 388 190 
+             C 424 195 442 232 442 270 
+             C 442 310 410 338 372 344 
+             C 380 376 356 424 256 424 
+             C 156 424 132 376 140 344 
+             C 102 338 70 310 70 270 
+             C 70 232 88 195 124 190 Z" 
+          fill="#172554"/>
+  </g>
+
+  <!-- 1. TOÁN (3D White with Deep Blue Extrusion) -->
+  <g font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-weight="900" text-anchor="middle">
+    <!-- 3D Extrusion Shadows -->
+    <text x="256" y="248" font-size="82" fill="#0f172a" letter-spacing="4">TOÁN</text>
+    <text x="256" y="244" font-size="82" fill="#1e3a8a" letter-spacing="4">TOÁN</text>
+    <text x="256" y="240" font-size="82" fill="#2563eb" letter-spacing="4">TOÁN</text>
+    <!-- Front Face -->
+    <text x="256" y="236" font-size="82" fill="url(#white3d)" stroke="#ffffff" stroke-width="2" letter-spacing="4">TOÁN</text>
+  </g>
+
+  <!-- 2. MATSUDA (3D Golden-Yellow Typography) -->
+  <g font-family="'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif" font-weight="950" text-anchor="middle">
+    <!-- 3D Extrusion Shadows -->
+    <text x="256" y="336" font-size="70" fill="#451a03" letter-spacing="2">MATSUDA</text>
+    <text x="256" y="332" font-size="70" fill="#78350f" letter-spacing="2">MATSUDA</text>
+    <text x="256" y="328" font-size="70" fill="url(#goldExtrude)" letter-spacing="2">MATSUDA</text>
+    <text x="256" y="324" font-size="70" fill="#ca8a04" letter-spacing="2">MATSUDA</text>
+    <!-- Front Golden Face -->
+    <text x="256" y="320" font-size="70" fill="url(#gold3d)" stroke="#fef08a" stroke-width="2" letter-spacing="2" filter="url(#glowYellow)">MATSUDA</text>
+  </g>
+
+  <!-- 3. AI (Glowing Cyan Tech Pill Badge with Circuit Nodes) -->
+  <g transform="translate(180, 344)">
+    <!-- Tech Badge Background -->
+    <rect x="0" y="0" width="152" height="74" rx="37" fill="#0c4a6e" stroke="#38bdf8" stroke-width="4.5" filter="url(#glowCyan)"/>
+    <rect x="4" y="4" width="144" height="66" rx="33" fill="url(#cyanBadge)"/>
+    
+    <!-- Circuit Lines & Nodes -->
+    <g stroke="#e0f2fe" stroke-width="3" fill="#e0f2fe">
+      <!-- Left circuit -->
+      <line x1="16" y1="37" x2="38" y2="37"/>
+      <circle cx="16" cy="37" r="4.5"/>
+      <line x1="28" y1="37" x2="34" y2="24"/>
+      <circle cx="34" cy="24" r="3.5"/>
+      
+      <!-- Right circuit -->
+      <line x1="114" y1="37" x2="136" y2="37"/>
+      <circle cx="136" cy="37" r="4.5"/>
+      <line x1="124" y1="37" x2="118" y2="50"/>
+      <circle cx="118" cy="50" r="3.5"/>
+    </g>
+
+    <!-- AI Letters (Pure White with Cyan Outline) -->
+    <text x="76" y="55" font-family="'Plus Jakarta Sans', sans-serif" font-size="52" font-weight="950" fill="#ffffff" stroke="#0284c7" stroke-width="2" text-anchor="middle" letter-spacing="3">AI</text>
+  </g>
+</svg>

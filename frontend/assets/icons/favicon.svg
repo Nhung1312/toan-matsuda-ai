@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="100%" height="100%">
+  <defs>
+    <linearGradient id="favBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0284c7"/>
+      <stop offset="50%" stop-color="#2563eb"/>
+      <stop offset="100%" stop-color="#1e1b4b"/>
+    </linearGradient>
+    <linearGradient id="favGold" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="100%" stop-color="#eab308"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="120" height="120" rx="30" fill="url(#favBg)" stroke="#60a5fa" stroke-width="3"/>
+  <!-- Robot Head Mini -->
+  <rect x="70" y="14" width="44" height="34" rx="12" fill="#ffffff" stroke="#cbd5e1" stroke-width="2"/>
+  <rect x="75" y="19" width="34" height="24" rx="8" fill="#0f172a"/>
+  <path d="M 81 31 Q 86 24 91 31" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 93 31 Q 98 24 103 31" fill="none" stroke="#38bdf8" stroke-width="3" stroke-linecap="round"/>
+  <!-- Text Badges -->
+  <text x="64" y="62" font-family="'Plus Jakarta Sans', sans-serif" font-size="24" font-weight="900" fill="#ffffff" text-anchor="middle" letter-spacing="1">TOÁN</text>
+  <text x="64" y="85" font-family="'Plus Jakarta Sans', sans-serif" font-size="20" font-weight="900" fill="url(#favGold)" text-anchor="middle">MATSUDA</text>
+  <!-- AI pill -->
+  <rect x="42" y="92" width="44" height="22" rx="11" fill="#0284c7" stroke="#38bdf8" stroke-width="1.5"/>
+  <text x="64" y="108" font-family="'Plus Jakarta Sans', sans-serif" font-size="15" font-weight="900" fill="#ffffff" text-anchor="middle">AI</text>
+</svg>

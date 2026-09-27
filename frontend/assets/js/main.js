@@ -1452,7 +1452,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // --- MỤC 2: HỆ THỐNG BÀI TẬP BỔ TRỢ CÁ NHÂN HÓA THEO LỖI SAI (THCS) ---
+    // --- MỤC 2: HỆ THỐNG BÀI TẬP BỔ TRỢ CÁ NHÂN HÓA CHUẨN THEO KHỐI LỚP (TOÁN THCS 6-7-8-9) ---
     function generateRemedialQuestions(data) {
         if (!data || !data.questions || data.questions.length === 0) return [];
 
@@ -1467,27 +1467,77 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        // Nếu học sinh làm đúng 100% (10/10), tặng bài toán thử thách tư duy nâng cao
+        // Xác định khối lớp thực tế của học sinh (từ phân loại câu hỏi hoặc ô nhập thông tin lớp)
+        const classInput = (document.getElementById('info-student-class')?.value || '').trim().toLowerCase();
+        let defaultGrade = 7; // Mặc định lớp 7 nếu chưa có thông tin
+        if (classInput.startsWith('6') || classInput.includes('lớp 6')) defaultGrade = 6;
+        else if (classInput.startsWith('7') || classInput.includes('lớp 7')) defaultGrade = 7;
+        else if (classInput.startsWith('8') || classInput.includes('lớp 8')) defaultGrade = 8;
+        else if (classInput.startsWith('9') || classInput.includes('lớp 9')) defaultGrade = 9;
+
+        // Nếu học sinh làm đúng 100% (10/10), tặng bài toán thử thách tư duy nâng cao chuẩn theo đúng khối lớp
         if (flawedQuestions.length === 0) {
-            return [{
-                id: 'chal_1',
-                targetQuestion: 'Bài toán phát triển năng lực (10/10)',
-                title: '🌟 Thử Thách Tư Duy & Bất Đẳng Thức Nâng Cao',
-                weakness: 'Bài thi hoàn hảo không có lỗi! Thử sức với bài toán mở rộng tư duy.',
-                problemLatex: 'Cho hai số dương $x, y$ thỏa mãn $x + y = 2$. Tìm giá trị nhỏ nhất của biểu thức: $Q = \\frac{1}{x^2 + y^2} + \\frac{2}{xy}$.',
-                hint: 'Áp dụng bất đẳng thức Cauchy-Schwarz dạng Engel $\\frac{1}{a} + \\frac{1}{b} \\ge \\frac{4}{a + b}$ và đánh giá $xy \\le \\frac{(x+y)^2}{4}$.',
-                solutionLatex: 'Tách biểu thức: $Q = \\left(\\frac{1}{x^2 + y^2} + \\frac{1}{2xy}\\right) + \\frac{3}{2xy}$.\nÁp dụng BĐT $\\frac{1}{a} + \\frac{1}{b} \\ge \\frac{4}{a+b}$ cho hai số dương $x^2 + y^2$ và $2xy$:\n$\\frac{1}{x^2 + y^2} + \\frac{1}{2xy} \\ge \\frac{4}{(x+y)^2} = \\frac{4}{4} = 1$.\nLại có $xy \\le \\frac{(x+y)^2}{4} = 1 \\Rightarrow \\frac{3}{2xy} \\ge \\frac{3}{2}$.\nCộng vế với vế: $Q \\ge 1 + \\frac{3}{2} = \\frac{5}{2}$. Dấu "=" xảy ra khi $x = y = 1$.\nVậy GTNN của $Q$ là $\\frac{5}{2}$.',
-                finalAnswer: 'Q_{\\min} = \\frac{5}{2} \\text{ khi } x = y = 1'
-            }];
+            if (defaultGrade === 6) {
+                return [{
+                    id: 'chal_6',
+                    targetQuestion: 'Bài toán phát triển năng lực Toán 6 (10/10)',
+                    title: '🌟 Thử Thách Tư Duy: Chữ Số Tận Cùng & Tính Chia Hết',
+                    weakness: 'Bài thi hoàn hảo! Thử sức với bài toán số học mở rộng.',
+                    problemLatex: 'Tìm chữ số tận cùng của tổng: $S = 2 + 2^2 + 2^3 + 2^4 + \\dots + 2^{2024}$.',
+                    hint: 'Nhóm 4 số hạng liên tiếp thành một nhóm: $(2 + 2^2 + 2^3 + 2^4) = 2 + 4 + 8 + 16 = 30$ (có chữ số tận cùng là 0).',
+                    solutionLatex: 'Ta có $2024 : 4 = 506$ nhóm đều nhau.\n$S = (2 + 2^2 + 2^3 + 2^4) + 2^4(2 + 2^2 + 2^3 + 2^4) + \\dots + 2^{2020}(2 + 2^2 + 2^3 + 2^4)$.\nMỗi nhóm có tổng bằng $30$, chia hết cho $10$.\nDo đó tổng $S$ có chữ số tận cùng là $0$.',
+                    finalAnswer: '\\text{Chữ số tận cùng là } 0'
+                }];
+            } else if (defaultGrade === 7) {
+                return [{
+                    id: 'chal_7',
+                    targetQuestion: 'Bài toán phát triển năng lực Toán 7 (10/10)',
+                    title: '🌟 Thử Thách Tư Duy: So Sánh Hai Lũy Thừa Lớn',
+                    weakness: 'Bài thi hoàn hảo! Thử sức với bài toán lũy thừa nâng cao.',
+                    problemLatex: 'So sánh hai lũy thừa sau: $A = 2^{300}$ và $B = 3^{200}$.',
+                    hint: 'Đưa hai lũy thừa về cùng số mũ bằng cách tìm ƯCLN của hai số mũ $300$ và $200$: $\\text{ƯCLN}(300, 200) = 100$. Áp dụng $(x^m)^n = x^{m \\cdot n}$.',
+                    solutionLatex: 'Ta có:\n$A = 2^{300} = (2^3)^{100} = 8^{100}$.\n$B = 3^{200} = (3^2)^{100} = 9^{100}$.\nVì $8 < 9$ nên $8^{100} < 9^{100}$.\nVậy $2^{300} < 3^{200}$ (tức $A < B$).',
+                    finalAnswer: 'A < B \\text{ (tức } 2^{300} < 3^{200}\\text{)}'
+                }];
+            } else if (defaultGrade === 8) {
+                return [{
+                    id: 'chal_8',
+                    targetQuestion: 'Bài toán phát triển năng lực Toán 8 (10/10)',
+                    title: '🌟 Thử Thách Tư Duy: Tìm Giá Trị Nhỏ Nhất Bằng Bình Phương',
+                    weakness: 'Bài thi hoàn hảo! Thử sức với bài toán cực trị đại số.',
+                    problemLatex: 'Tìm giá trị nhỏ nhất của biểu thức: $P = x^2 - 4xy + 5y^2 + 6y + 20$.',
+                    hint: 'Tách $5y^2 = 4y^2 + y^2$ để nhóm thành hai bình phương độc lập: $(x - 2y)^2$ và $(y + 3)^2$.',
+                    solutionLatex: 'Biến đổi:\n$P = (x^2 - 4xy + 4y^2) + (y^2 + 6y + 9) + 11$\n$P = (x - 2y)^2 + (y + 3)^2 + 11$.\nVì $(x - 2y)^2 \\ge 0$ và $(y + 3)^2 \\ge 0$ với mọi $x, y$, nên $P \\ge 11$.\nDấu "=" xảy ra khi $y = -3$ và $x = 2y = -6$.\nVậy GTNN của $P$ là $11$ khi $x = -6, y = -3$.',
+                    finalAnswer: 'P_{\\min} = 11 \\text{ khi } x = -6, y = -3'
+                }];
+            } else {
+                return [{
+                    id: 'chal_9',
+                    targetQuestion: 'Bài toán phát triển năng lực Toán 9 (10/10)',
+                    title: '🌟 Thử Thách Tư Duy: Bất Đẳng Thức & Cực Trị',
+                    weakness: 'Bài thi hoàn hảo! Thử sức với bài toán mở rộng tư duy.',
+                    problemLatex: 'Cho hai số dương $x, y$ thỏa mãn $x + y = 2$. Tìm giá trị nhỏ nhất của: $Q = \\frac{1}{x^2 + y^2} + \\frac{2}{xy}$.',
+                    hint: 'Áp dụng BĐT Cauchy-Schwarz dạng Engel $\\frac{1}{a} + \\frac{1}{b} \\ge \\frac{4}{a + b}$ và đánh giá $xy \\le \\frac{(x+y)^2}{4}$.',
+                    solutionLatex: 'Tách: $Q = \\left(\\frac{1}{x^2 + y^2} + \\frac{1}{2xy}\\right) + \\frac{3}{2xy} \\ge \\frac{4}{(x+y)^2} + \\frac{3}{2 \\cdot 1} = 1 + \\frac{3}{2} = \\frac{5}{2}$.\nDấu "=" xảy ra khi $x = y = 1$.\nVậy GTNN của $Q$ là $\\frac{5}{2}$.',
+                    finalAnswer: 'Q_{\\min} = \\frac{5}{2} \\text{ khi } x = y = 1'
+                }];
+            }
         }
 
         const remedialList = [];
 
         flawedQuestions.forEach(({ q, idx }) => {
             const qId = q.questionId || q.question || `Câu ${idx + 1}`;
+            const qGradeRaw = (q.classification?.grade || '').toLowerCase();
+            let qGrade = defaultGrade;
+            if (qGradeRaw.includes('6')) qGrade = 6;
+            else if (qGradeRaw.includes('7')) qGrade = 7;
+            else if (qGradeRaw.includes('8')) qGrade = 8;
+            else if (qGradeRaw.includes('9')) qGrade = 9;
+
             const textAll = `${q.problemStatementLatex || ''} ${q.classification?.topic || ''} ${q.classification?.subtopic || ''} ${q.classification?.problemType || ''} ${q.feedback || ''}`.toLowerCase();
 
-            // Tìm lỗi đầu tiên hoặc lỗi chính của câu
+            // Tìm nguyên nhân lỗi đầu tiên hoặc lỗi nổi bật của học sinh
             let errReason = '';
             if (q.analysis && q.analysis.length > 0) {
                 const firstErr = q.analysis.find(s => s.isFirstError) || q.analysis.find(s => s.status !== 'correct');
@@ -1497,74 +1547,200 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             if (!errReason && q.feedback) errReason = q.feedback;
 
-            // Nhận diện chuyên đề toán THCS
-            if (textAll.includes('căn') || textAll.includes('\\sqrt') || textAll.includes('radical')) {
+            // ========================================================
+            // CHUYÊN ĐỀ 1: LŨY THỪA VỚI SỐ MŨ TỰ NHIÊN & SỐ HỮU TỈ (LỚP 6 - 7)
+            // Nhận diện: có chữ "lũy thừa", "luy thua", "số mũ", "cơ số" hoặc biểu thức có dạng a^b, (-c)^d
+            // ========================================================
+            const isExponentTopic = textAll.includes('lũy thừa') || 
+                                    textAll.includes('luy thua') || 
+                                    textAll.includes('số mũ') || 
+                                    textAll.includes('cơ số') || 
+                                    textAll.includes('power') || 
+                                    textAll.includes('exponent') || 
+                                    /[\d\)]\s*\^\s*[\d\{]/.test(q.problemStatementLatex || '') ||
+                                    (textAll.includes('số hữu tỉ') && textAll.includes('^'));
+
+            if (isExponentTopic && qGrade <= 7) {
                 remedialList.push({
-                    id: `rem_${idx}_1`,
-                    targetQuestion: qId,
-                    title: 'Rèn luyện: Rút gọn biểu thức chứa căn bậc hai',
-                    weakness: errReason || 'Nhầm lẫn điều kiện xác định hoặc quy đồng căn thức',
-                    problemLatex: 'Cho biểu thức $P = \\left(\\frac{\\sqrt{x}}{\\sqrt{x} - 2} - \\frac{4}{x - 2\\sqrt{x}}\\right) : \\frac{\\sqrt{x} + 2}{\\sqrt{x}}$ với $x > 0; x \\ne 4$. Rút gọn $P$ và tìm $x$ để $P = \\frac{1}{2}$.',
-                    hint: 'Phân tích mẫu thứ hai thành nhân tử: $x - 2\\sqrt{x} = \\sqrt{x}(\\sqrt{x} - 2)$. Sau đó quy đồng mẫu thức chung trong ngoặc.',
-                    solutionLatex: 'ĐKXĐ: $x > 0; x \\ne 4$.\nBiến đổi trong ngoặc:\n$\\frac{\\sqrt{x} \\cdot \\sqrt{x} - 4}{\\sqrt{x}(\\sqrt{x} - 2)} = \\frac{x - 4}{\\sqrt{x}(\\sqrt{x} - 2)} = \\frac{(\\sqrt{x} - 2)(\\sqrt{x} + 2)}{\\sqrt{x}(\\sqrt{x} - 2)} = \\frac{\\sqrt{x} + 2}{\\sqrt{x}}$.\nThực hiện phép chia:\n$P = \\frac{\\sqrt{x} + 2}{\\sqrt{x}} : \\frac{\\sqrt{x} + 2}{\\sqrt{x}} = 1$.\nĐể $P = \\frac{1}{2} \\Rightarrow 1 = \\frac{1}{2}$ (vô lý). Vậy không có giá trị $x$ thỏa mãn.',
-                    finalAnswer: 'P = 1; \\text{ Phương trình vô nghiệm}'
+                    id: `rem_${idx}_exp`,
+                    targetQuestion: `${qId} (Toán Lớp ${qGrade})`,
+                    title: `🎯 Rèn luyện: Rút gọn biểu thức lũy thừa & Đưa về cơ số nguyên tố (Lớp ${qGrade})`,
+                    weakness: errReason || 'Chưa phân tích triệt để cơ số hợp số về cơ số nguyên tố hoặc sai quy tắc dấu của lũy thừa âm',
+                    problemLatex: 'Rút gọn biểu thức sau bằng cách phân tích các cơ số ra thừa số nguyên tố: $$A = \\frac{6^4 \\cdot (-18)^3}{(-4)^5 \\cdot 9^4} \\quad \\text{và} \\quad B = \\frac{4^5 \\cdot 9^4 - 2 \\cdot 6^9}{2^{10} \\cdot 3^8 + 6^8 \\cdot 20}$$',
+                    hint: '1) Phân tích cơ số hợp số: $6 = 2 \\cdot 3$, $-18 = (-1) \\cdot 2 \\cdot 3^2$, $-4 = (-1) \\cdot 2^2$, $9 = 3^2$.\n2) Quy tắc dấu: $(-a)^{2n} = a^{2n}$ (mũ chẵn dấu dương), $(-a)^{2n+1} = -a^{2n+1}$ (mũ lẻ giữ dấu âm).\n3) Nhóm thừa số chung ở tử và mẫu trước khi rút gọn triệt để.',
+                    solutionLatex: '• Với biểu thức $A$:\n$6^4 = (2 \\cdot 3)^4 = 2^4 \\cdot 3^4$.\n$(-18)^3 = [(-1) \\cdot 2 \\cdot 3^2]^3 = (-1) \\cdot 2^3 \\cdot 3^6$.\n$(-4)^5 = [(-1) \\cdot 2^2]^5 = (-1) \\cdot 2^{10}$.\n$9^4 = (3^2)^4 = 3^8$.\nThay vào: $A = \\frac{2^4 \\cdot 3^4 \\cdot (-1) \\cdot 2^3 \\cdot 3^6}{(-1) \\cdot 2^{10} \\cdot 3^8} = \\frac{-2^7 \\cdot 3^{10}}{-2^{10} \\cdot 3^8} = \\frac{3^2}{2^3} = \\frac{9}{8}$.\n\n• Với biểu thức $B$:\nTử số: $4^5 \\cdot 9^4 - 2 \\cdot 6^9 = 2^{10} \\cdot 3^8 - 2 \\cdot 2^9 \\cdot 3^9 = 2^{10} \\cdot 3^8 - 2^{10} \\cdot 3^9 = 2^{10} \\cdot 3^8 (1 - 3) = -2 \\cdot 2^{10} \\cdot 3^8 = -2^{11} \\cdot 3^8$.\nMẫu số: $2^{10} \\cdot 3^8 + (2 \\cdot 3)^8 \\cdot (2^2 \\cdot 5) = 2^{10} \\cdot 3^8 + 2^{10} \\cdot 3^8 \\cdot 5 = 2^{10} \\cdot 3^8(1 + 5) = 6 \\cdot 2^{10} \\cdot 3^8 = 2^{11} \\cdot 3^9$.\nDo đó: $B = \\frac{-2^{11} \\cdot 3^8}{2^{11} \\cdot 3^9} = -\\frac{1}{3}$.',
+                    finalAnswer: 'A = \\frac{9}{8}; \\quad B = -\\frac{1}{3}'
                 });
-            } else if (textAll.includes('hệ phương trình') || textAll.includes('hpt')) {
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 2: SỐ HỮU TỈ & TÍNH TOÁN PHÂN SỐ / SỐ NGUYÊN (LỚP 6 - 7)
+            // ========================================================
+            else if (qGrade <= 7 && (textAll.includes('số hữu tỉ') || textAll.includes('phân số') || textAll.includes('số nguyên') || textAll.includes('hợp lý') || textAll.includes('phép tính'))) {
                 remedialList.push({
-                    id: `rem_${idx}_1`,
-                    targetQuestion: qId,
-                    title: 'Rèn luyện: Giải hệ phương trình bậc nhất hai ẩn',
-                    weakness: errReason || 'Nhầm dấu khi nhân hệ số hoặc cộng trừ hai phương trình',
-                    problemLatex: 'Giải hệ phương trình: $\\begin{cases} 2x + 3y = 7 \\\\ 3x - 2y = 4 \\end{cases}$',
-                    hint: 'Nhân phương trình (1) với 2 và nhân phương trình (2) với 3 để hệ số của $y$ triệt tiêu khi cộng từng vế.',
-                    solutionLatex: '$\\begin{cases} 4x + 6y = 14 \\\\ 9x - 6y = 12 \\end{cases} \\Rightarrow 13x = 26 \\Rightarrow x = 2$.\nThay $x = 2$ vào $2x + 3y = 7 \\Rightarrow 4 + 3y = 7 \\Rightarrow y = 1$.\nVậy nghiệm của hệ phương trình là $(x; y) = (2; 1)$.',
-                    finalAnswer: '(x; y) = (2; 1)'
+                    id: `rem_${idx}_num`,
+                    targetQuestion: `${qId} (Toán Lớp ${qGrade})`,
+                    title: `🎯 Rèn luyện: Tính giá trị biểu thức số hữu tỉ một cách hợp lý (Lớp ${qGrade})`,
+                    weakness: errReason || 'Chưa vận dụng tính chất phân phối hoặc nhầm lẫn dấu khi cộng trừ phân số',
+                    problemLatex: 'Thực hiện phép tính một cách hợp lý nhất: $$M = \\left( -\\frac{3}{5} + \\frac{1}{4} \\right) : \\frac{7}{10} + \\left( \\frac{3}{4} - \\frac{2}{5} \\right) : \\frac{7}{10} - \\left( -\\frac{1}{2} \\right)^2$$',
+                    hint: 'Hai số hạng đầu cùng chia cho $\\frac{7}{10}$, áp dụng tính chất phân phối: $(A + B) : C = A : C + B : C$. Chú ý $\\left(-\\frac{1}{2}\\right)^2 = \\frac{1}{4}$.',
+                    solutionLatex: 'Nhóm thừa số chung:\n$M = \\left[ \\left( -\\frac{3}{5} + \\frac{1}{4} \\right) + \\left( \\frac{3}{4} - \\frac{2}{5} \\right) \\right] : \\frac{7}{10} - \\frac{1}{4}$\n$= \\left[ \\left( -\\frac{3}{5} - \\frac{2}{5} \\right) + \\left( \\frac{1}{4} + \\frac{3}{4} \\right) \\right] : \\frac{7}{10} - \\frac{1}{4}$\n$= \\left( -1 + 1 \\right) : \\frac{7}{10} - \\frac{1}{4} = 0 - \\frac{1}{4} = -\\frac{1}{4}$.',
+                    finalAnswer: 'M = -\\frac{1}{4}'
                 });
-            } else if (textAll.includes('phương trình') || textAll.includes('equation') || textAll.includes('tìm x')) {
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 3: TỈ LỆ THỨC & DÃY TỈ SỐ BẰNG NHAU (LỚP 7)
+            // ========================================================
+            else if (qGrade === 7 && (textAll.includes('tỉ lệ') || textAll.includes('tỉ số') || textAll.includes('ti so') || textAll.includes('dãy tỉ số'))) {
                 remedialList.push({
-                    id: `rem_${idx}_1`,
-                    targetQuestion: qId,
-                    title: 'Rèn luyện: Giải phương trình & Quy tắc chuyển vế đổi dấu',
-                    weakness: errReason || 'Sai quy tắc đổi dấu khi chuyển vế hoặc nhân phá ngoặc',
-                    problemLatex: 'Giải phương trình sau: $4(2x - 3) - 3(x + 2) = 2(3x - 5) + 1$.',
-                    hint: 'Cẩn thận khi nhân phân phối dấu âm $-3(x + 2) = -3x - 6$, sau đó nhóm các hạng tử chứa $x$ về một vế.',
-                    solutionLatex: 'Khai triển: $8x - 12 - 3x - 6 = 6x - 10 + 1$.\nThu gọn: $5x - 18 = 6x - 9$.\nChuyển vế: $5x - 6x = -9 + 18 \\Rightarrow -x = 9 \\Rightarrow x = -9$.\nVậy tập nghiệm $S = \\{-9\\}$.',
-                    finalAnswer: 'x = -9'
+                    id: `rem_${idx}_ratio`,
+                    targetQuestion: `${qId} (Toán Lớp 7)`,
+                    title: '🎯 Rèn luyện: Tính chất của dãy tỉ số bằng nhau (Lớp 7)',
+                    weakness: errReason || 'Nhầm hệ số khi nhân vào các tỉ số hoặc đổi dấu chưa chính xác',
+                    problemLatex: 'Tìm ba số $x, y, z$ biết: $\\frac{x}{2} = \\frac{y}{3} = \\frac{z}{5}$ và $x + 2y - z = 27$.',
+                    hint: 'Nhân cả tử và mẫu của tỉ số thứ hai với $2$: $\\frac{y}{3} = \\frac{2y}{6}$. Áp dụng tính chất dãy tỉ số bằng nhau: $\\frac{x}{2} = \\frac{2y}{6} = \\frac{z}{5} = \\frac{x + 2y - z}{2 + 6 - 5}$.',
+                    solutionLatex: 'Áp dụng tính chất của dãy tỉ số bằng nhau:\n$\\frac{x}{2} = \\frac{y}{3} = \\frac{z}{5} = \\frac{2y}{6} = \\frac{x + 2y - z}{2 + 6 - 5} = \\frac{27}{3} = 9$.\nSuy ra:\n$x = 2 \\cdot 9 = 18$.\n$y = 3 \\cdot 9 = 27$.\n$z = 5 \\cdot 9 = 45$.\nVậy $(x; y; z) = (18; 27; 45)$.',
+                    finalAnswer: 'x = 18, \\quad y = 27, \\quad z = 45'
                 });
-            } else if (textAll.includes('tam giác') || textAll.includes('hình học') || textAll.includes('geometry') || textAll.includes('pytago')) {
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 4: BIỂU THỨC ĐẠI SỐ & ĐA THỨC MỘT BIẾN (LỚP 7)
+            // ========================================================
+            else if (qGrade === 7 && (textAll.includes('đa thức') || textAll.includes('đơn thức') || textAll.includes('nghiệm'))) {
                 remedialList.push({
-                    id: `rem_${idx}_1`,
-                    targetQuestion: qId,
-                    title: 'Rèn luyện: Hệ thức lượng & Định lý Pytago trong tam giác vuông',
-                    weakness: errReason || 'Áp dụng sai hệ thức lượng hoặc thiếu căn thức',
-                    problemLatex: 'Cho tam giác $ABC$ vuông tại $A$, đường cao $AH$. Biết $AB = 9\\text{ cm}, AC = 12\\text{ cm}$. Tính độ dài cạnh huyền $BC$ và đường cao $AH$.',
-                    hint: 'Dùng Pytago $BC = \\sqrt{AB^2 + AC^2}$, sau đó dùng công thức diện tích $AB \\cdot AC = BC \\cdot AH$.',
-                    solutionLatex: '1) Cạnh huyền: $BC = \\sqrt{9^2 + 12^2} = \\sqrt{81 + 144} = \\sqrt{225} = 15\\text{ cm}$.\n2) Đường cao: $AH = \\frac{AB \\cdot AC}{BC} = \\frac{9 \\cdot 12}{15} = \\frac{108}{15} = 7{,}2\\text{ cm}$.',
-                    finalAnswer: 'BC = 15\\text{ cm}; AH = 7{,}2\\text{ cm}'
+                    id: `rem_${idx}_poly7`,
+                    targetQuestion: `${qId} (Toán Lớp 7)`,
+                    title: '🎯 Rèn luyện: Cộng trừ đa thức một biến & Tìm nghiệm (Lớp 7)',
+                    weakness: errReason || 'Sai sót khi thu gọn các đơn thức đồng dạng hoặc quên đổi dấu khi trừ đa thức',
+                    problemLatex: 'Cho hai đa thức: $P(x) = 2x^3 - 3x^2 + 5x - 8$ và $Q(x) = -2x^3 + 3x^2 + 4x + 19$.\na) Tính $A(x) = P(x) + Q(x)$;\nb) Tìm nghiệm của đa thức $A(x)$.',
+                    hint: 'Nhóm các hạng tử có cùng số mũ để cộng/trừ hệ số: $A(x) = [2 + (-2)]x^3 + [-3 + 3]x^2 + (5 + 4)x + (-8 + 19)$. Để tìm nghiệm, giải $A(x) = 0$.',
+                    solutionLatex: 'a) $A(x) = P(x) + Q(x) = (2x^3 - 2x^3) + (-3x^2 + 3x^2) + (5x + 4x) + (-8 + 19) = 9x + 11$.\nb) Nghiệm của $A(x)$ là giá trị $x$ để $A(x) = 0$:\n$9x + 11 = 0 \\Leftrightarrow 9x = -11 \\Leftrightarrow x = -\\frac{11}{9}$.\nVậy nghiệm của đa thức là $x = -\\frac{11}{9}$.',
+                    finalAnswer: 'A(x) = 9x + 11; \\quad x = -\\frac{11}{9}'
                 });
-            } else if (textAll.includes('bất đẳng thức') || textAll.includes('gtnn') || textAll.includes('gtln') || textAll.includes('min') || textAll.includes('max')) {
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 5: HÌNH HỌC THCS (LỚP 7: TAM GIÁC BẰNG NHAU / CÂN)
+            // ========================================================
+            else if (qGrade <= 7 && (textAll.includes('tam giác') || textAll.includes('hình học') || textAll.includes('góc') || textAll.includes('chứng minh'))) {
                 remedialList.push({
-                    id: `rem_${idx}_1`,
-                    targetQuestion: qId,
-                    title: 'Rèn luyện: Tìm GTLN/GTNN bằng cách tạo bình phương',
-                    weakness: errReason || 'Tách hằng số chưa chuẩn hoặc quên điều kiện xảy ra dấu bằng',
-                    problemLatex: 'Tìm giá trị nhỏ nhất của biểu thức: $A = x^2 - 6x + 15$.',
-                    hint: 'Thêm bớt để tạo bình phương của một hiệu: $x^2 - 6x + 9 = (x - 3)^2$.',
-                    solutionLatex: 'Biến đổi: $A = (x^2 - 6x + 9) + 6 = (x - 3)^2 + 6$.\nVì $(x - 3)^2 \\ge 0$ với mọi $x \\in \\mathbb{R}$, nên $A \\ge 6$.\nDấu "=" xảy ra khi $x - 3 = 0 \\Leftrightarrow x = 3$.\nVậy GTNN của $A$ là $6$ khi $x = 3$.',
-                    finalAnswer: 'A_{\\min} = 6 \\text{ khi } x = 3'
+                    id: `rem_${idx}_geo7`,
+                    targetQuestion: `${qId} (Toán Lớp ${qGrade})`,
+                    title: `🎯 Rèn luyện: Các trường hợp bằng nhau của tam giác & Tam giác cân (Lớp ${qGrade})`,
+                    weakness: errReason || 'Chưa nêu đủ 3 điều kiện bằng nhau hoặc nhầm lẫn giữa cạnh tương ứng và góc xen giữa',
+                    problemLatex: 'Cho tam giác $ABC$ cân tại $A$. Gọi $M$ là trung điểm của cạnh $BC$.\na) Chứng minh $\\triangle ABM = \\triangle ACM$;\nb) Chứng minh $AM \\perp BC$ và $AM$ là tia phân giác của góc $\\widehat{BAC}$.',
+                    hint: 'Xét $\\triangle ABM$ và $\\triangle ACM$ theo trường hợp cạnh - cạnh - cạnh (c.c.c): $AB = AC$ (gt), $BM = MC$ (gt), $AM$ chung. Dùng hai góc kề bù $\\widehat{AMB} + \\widehat{AMC} = 180^\\circ$ để chứng minh vuông góc.',
+                    solutionLatex: 'a) Xét $\\triangle ABM$ và $\\triangle ACM$ có:\n• $AB = AC$ (tam giác $ABC$ cân tại $A$)\n• $BM = CM$ ($M$ là trung điểm $BC$)\n• $AM$ là cạnh chung\n$\\Rightarrow \\triangle ABM = \\triangle ACM$ (c - c - c).\n\nb) Vì $\\triangle ABM = \\triangle ACM$:\n• $\\widehat{BAM} = \\widehat{CAM}$ (hai góc tương ứng) $\\Rightarrow AM$ là tia phân giác của $\\widehat{BAC}$.\n• $\\widehat{AMB} = \\widehat{AMC}$ (hai góc tương ứng).\nMà $\\widehat{AMB} + \\widehat{AMC} = 180^\\circ$ (hai góc kề bù) $\\Rightarrow \\widehat{AMB} = \\widehat{AMC} = 90^\\circ$.\nVậy $AM \\perp BC$.',
+                    finalAnswer: '\\triangle ABM = \\triangle ACM; \\quad AM \\perp BC'
                 });
-            } else {
-                // Đại số & Phân thức mặc định (chiếm phần lớn chương trình THCS)
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 6: HẰNG ĐẲNG THỨC & PHÂN TÍCH NHÂN TỬ (LỚP 8)
+            // ========================================================
+            else if (qGrade === 8 && (textAll.includes('hằng đẳng thức') || textAll.includes('nhân tử') || textAll.includes('hdt'))) {
                 remedialList.push({
-                    id: `rem_${idx}_1`,
-                    targetQuestion: qId,
-                    title: 'Rèn luyện: Rút gọn phân thức đại số & Quy tắc đổi dấu',
-                    weakness: errReason || 'Sai quy tắc đổi dấu mẫu thức hoặc phân tích nhân tử',
-                    problemLatex: 'Rút gọn phân thức: $M = \\frac{x^2 - 25}{x^2 + 5x} + \\frac{2x - 1}{x}$ với $x \\ne 0; x \\ne -5$.',
-                    hint: 'Phân tích $x^2 - 25 = (x - 5)(x + 5)$ và mẫu $x^2 + 5x = x(x + 5)$ để rút gọn phân thức đầu trước khi cộng.',
-                    solutionLatex: 'ĐKXĐ: $x \\ne 0; x \\ne -5$.\nPhân thức đầu: $\\frac{(x - 5)(x + 5)}{x(x + 5)} = \\frac{x - 5}{x}$.\nCộng cùng mẫu: $M = \\frac{x - 5}{x} + \\frac{2x - 1}{x} = \\frac{(x - 5) + (2x - 1)}{x} = \\frac{3x - 6}{x} = \\frac{3(x - 2)}{x}$.',
+                    id: `rem_${idx}_fact8`,
+                    targetQuestion: `${qId} (Toán Lớp 8)`,
+                    title: '🎯 Rèn luyện: Phân tích đa thức thành nhân tử & 7 Hằng đẳng thức (Lớp 8)',
+                    weakness: errReason || 'Nhầm dấu trong hằng đẳng thức hoặc tách hạng tử chưa tối ưu',
+                    problemLatex: 'Phân tích các đa thức sau thành nhân tử: $$A = x^3 - 6x^2 + 9x \\quad \\text{và} \\quad B = x^2 - 2xy + y^2 - 25$$',
+                    hint: '• Với $A$: Đặt nhân tử chung $x$ ra ngoài, bên trong là hằng đẳng thức $(x - 3)^2$.\n• Với $B$: Nhóm 3 hạng tử đầu thành $(x - y)^2$, sau đó dùng hiệu hai bình phương $a^2 - b^2$ với $25 = 5^2$.',
+                    solutionLatex: '• $A = x(x^2 - 6x + 9) = x(x - 3)^2$.\n• $B = (x^2 - 2xy + y^2) - 25 = (x - y)^2 - 5^2 = (x - y - 5)(x - y + 5)$.',
+                    finalAnswer: 'A = x(x - 3)^2; \\quad B = (x - y - 5)(x - y + 5)'
+                });
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 7: PHÂN THỨC ĐẠI SỐ (LỚP 8)
+            // ========================================================
+            else if (qGrade === 8 && (textAll.includes('phân thức') || textAll.includes('mẫu thức'))) {
+                remedialList.push({
+                    id: `rem_${idx}_frac8`,
+                    targetQuestion: `${qId} (Toán Lớp 8)`,
+                    title: '🎯 Rèn luyện: Rút gọn phân thức đại số & Quy tắc đổi dấu (Lớp 8)',
+                    weakness: errReason || 'Sai quy tắc đổi dấu mẫu thức hoặc phân tích nhân tử để triệt tiêu',
+                    problemLatex: 'Rút gọn phân thức đại số: $$M = \\frac{x^2 - 25}{x^2 + 5x} + \\frac{2x - 1}{x} \\quad \\text{với } x \\ne 0; x \\ne -5$$',
+                    hint: 'Phân tích tử $x^2 - 25 = (x - 5)(x + 5)$ và mẫu $x^2 + 5x = x(x + 5)$ để rút gọn phân thức đầu tiên trước khi cộng.',
+                    solutionLatex: 'Rút gọn phân thức thứ nhất:\n$\\frac{(x - 5)(x + 5)}{x(x + 5)} = \\frac{x - 5}{x}$.\nCộng với phân thức thứ hai cùng mẫu $x$:\n$M = \\frac{x - 5}{x} + \\frac{2x - 1}{x} = \\frac{(x - 5) + (2x - 1)}{x} = \\frac{3x - 6}{x} = \\frac{3(x - 2)}{x}$.',
                     finalAnswer: 'M = \\frac{3x - 6}{x}'
                 });
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 8: CĂN THỨC BẬC HAI (LỚP 9)
+            // ========================================================
+            else if (qGrade === 9 && (textAll.includes('căn') || textAll.includes('\\sqrt') || textAll.includes('radical'))) {
+                remedialList.push({
+                    id: `rem_${idx}_rad9`,
+                    targetQuestion: `${qId} (Toán Lớp 9)`,
+                    title: '🎯 Rèn luyện: Rút gọn biểu thức chứa căn bậc hai (Lớp 9)',
+                    weakness: errReason || 'Nhầm lẫn điều kiện xác định hoặc quy đồng mẫu căn thức',
+                    problemLatex: 'Cho biểu thức $P = \\left(\\frac{\\sqrt{x}}{\\sqrt{x} - 2} - \\frac{4}{x - 2\\sqrt{x}}\\right) : \\frac{\\sqrt{x} + 2}{\\sqrt{x}}$ với $x > 0; x \\ne 4$. Rút gọn $P$ và tìm $x$ để $P = 1$.',
+                    hint: 'Phân tích mẫu thứ hai: $x - 2\\sqrt{x} = \\sqrt{x}(\\sqrt{x} - 2)$. Sau đó quy đồng mẫu thức chung trong ngoặc.',
+                    solutionLatex: 'Trong ngoặc:\n$\\frac{\\sqrt{x} \\cdot \\sqrt{x} - 4}{\\sqrt{x}(\\sqrt{x} - 2)} = \\frac{x - 4}{\\sqrt{x}(\\sqrt{x} - 2)} = \\frac{(\\sqrt{x} - 2)(\\sqrt{x} + 2)}{\\sqrt{x}(\\sqrt{x} - 2)} = \\frac{\\sqrt{x} + 2}{\\sqrt{x}}$.\nThực hiện phép chia: $P = \\frac{\\sqrt{x} + 2}{\\sqrt{x}} : \\frac{\\sqrt{x} + 2}{\\sqrt{x}} = 1$.\nVì $P = 1$ với mọi $x > 0, x \\ne 4$, nên tập giá trị $x$ là mọi $x > 0; x \\ne 4$.',
+                    finalAnswer: 'P = 1 \\text{ với mọi } x > 0; x \\ne 4'
+                });
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 9: HỆ PHƯƠNG TRÌNH & PHƯƠNG TRÌNH (LỚP 9)
+            // ========================================================
+            else if (textAll.includes('hệ phương trình') || textAll.includes('hpt')) {
+                remedialList.push({
+                    id: `rem_${idx}_sys`,
+                    targetQuestion: `${qId} (Toán Lớp 9)`,
+                    title: '🎯 Rèn luyện: Giải hệ phương trình bậc nhất hai ẩn (Lớp 9)',
+                    weakness: errReason || 'Nhầm dấu khi nhân hệ số hoặc cộng trừ triệt tiêu ẩn số',
+                    problemLatex: 'Giải hệ phương trình: $$\\begin{cases} 2x + 3y = 7 \\\\ 3x - 2y = 4 \\end{cases}$$',
+                    hint: 'Nhân phương trình (1) với 2 và nhân phương trình (2) với 3 để hệ số của $y$ triệt tiêu khi cộng hai vế.',
+                    solutionLatex: '$\\begin{cases} 4x + 6y = 14 \\\\ 9x - 6y = 12 \\end{cases} \\Rightarrow 13x = 26 \\Rightarrow x = 2$.\nThay vào: $2(2) + 3y = 7 \\Rightarrow 3y = 3 \\Rightarrow y = 1$.\nVậy $(x; y) = (2; 1)$.',
+                    finalAnswer: '(x; y) = (2; 1)'
+                });
+            }
+            // ========================================================
+            // MẶC ĐỊNH THEO ĐÚNG KHỐI LỚP (KHÔNG BAO GIỜ BỊ NHẢY LỚP 8 CHO HỌC SINH LỚP 6-7)
+            // ========================================================
+            else {
+                if (qGrade <= 6) {
+                    remedialList.push({
+                        id: `rem_${idx}_def6`,
+                        targetQuestion: `${qId} (Toán Lớp 6)`,
+                        title: '🎯 Rèn luyện: Thứ tự thực hiện phép tính & Tìm x (Toán Lớp 6)',
+                        weakness: errReason || 'Nhầm lẫn thứ tự nhân chia trước, cộng trừ sau hoặc quy tắc chuyển vế',
+                        problemLatex: 'Tìm số tự nhiên $x$ biết: $$3 \\cdot (2x - 5) + 14 = 5^2 + 4$$',
+                        hint: 'Tính lũy thừa trước: $5^2 = 25$. Thu gọn vế phải $25 + 4 = 29$. Sau đó chuyển $14$ sang vế phải.',
+                        solutionLatex: '$3(2x - 5) + 14 = 29$\n$3(2x - 5) = 29 - 14 = 15$\n$2x - 5 = 15 : 3 = 5$\n$2x = 5 + 5 = 10 \\Rightarrow x = 5$.\nVậy $x = 5$.',
+                        finalAnswer: 'x = 5'
+                    });
+                } else if (qGrade === 7) {
+                    remedialList.push({
+                        id: `rem_${idx}_def7`,
+                        targetQuestion: `${qId} (Toán Lớp 7)`,
+                        title: '🎯 Rèn luyện: Biến đổi biểu thức lũy thừa & Số hữu tỉ (Toán Lớp 7)',
+                        weakness: errReason || 'Cần củng cố quy tắc nhân chia lũy thừa cùng cơ số và dấu của số hữu tỉ',
+                        problemLatex: 'Rút gọn và tính giá trị biểu thức: $$K = \\frac{(-2)^3 \\cdot 3^4}{6^3} + \\frac{15^2 \\cdot (-2)^4}{(-6)^2 \\cdot 5^2}$$',
+                        hint: 'Phân tích các cơ số hợp số $6 = 2 \\cdot 3$, $15 = 3 \\cdot 5$. Chú ý dấu lũy thừa âm chẵn/lẻ.',
+                        solutionLatex: '• Cụm 1: $\\frac{-2^3 \\cdot 3^4}{2^3 \\cdot 3^3} = -3$.\n• Cụm 2: $\\frac{(3 \\cdot 5)^2 \\cdot 2^4}{(2 \\cdot 3)^2 \\cdot 5^2} = \\frac{3^2 \\cdot 5^2 \\cdot 2^4}{2^2 \\cdot 3^2 \\cdot 5^2} = 2^2 = 4$.\nCộng lại: $K = -3 + 4 = 1$.',
+                        finalAnswer: 'K = 1'
+                    });
+                } else if (qGrade === 8) {
+                    remedialList.push({
+                        id: `rem_${idx}_def8`,
+                        targetQuestion: `${qId} (Toán Lớp 8)`,
+                        title: '🎯 Rèn luyện: Phân tích đa thức thành nhân tử & Rút gọn (Toán Lớp 8)',
+                        weakness: errReason || 'Cần củng cố phương pháp đặt nhân tử chung và hằng đẳng thức',
+                        problemLatex: 'Rút gọn phân thức: $$P = \\frac{2x^2 - 8}{x^2 + 4x + 4} \\quad (x \\ne -2)$$',
+                        hint: 'Tử số đặt 2 ra ngoài: $2(x^2 - 4) = 2(x - 2)(x + 2)$. Mẫu số là bình phương: $(x + 2)^2$.',
+                        solutionLatex: '$P = \\frac{2(x - 2)(x + 2)}{(x + 2)^2} = \\frac{2(x - 2)}{x + 2}$.',
+                        finalAnswer: 'P = \\frac{2(x - 2)}{x + 2}'
+                    });
+                } else {
+                    remedialList.push({
+                        id: `rem_${idx}_def9`,
+                        targetQuestion: `${qId} (Toán Lớp 9)`,
+                        title: '🎯 Rèn luyện: Rút gọn biểu thức căn thức bậc hai (Toán Lớp 9)',
+                        weakness: errReason || 'Cần chú ý điều kiện xác định và trục căn thức ở mẫu',
+                        problemLatex: 'Rút gọn biểu thức: $$Q = \\frac{1}{\\sqrt{3} - 1} - \\frac{1}{\\sqrt{3} + 1}$$',
+                        hint: 'Quy đồng mẫu thức chung $(\\sqrt{3} - 1)(\\sqrt{3} + 1) = 3 - 1 = 2$.',
+                        solutionLatex: '$Q = \\frac{(\\sqrt{3} + 1) - (\\sqrt{3} - 1)}{(\\sqrt{3})^2 - 1^2} = \\frac{2}{2} = 1$.',
+                        finalAnswer: 'Q = 1'
+                    });
+                }
             }
         });
 
@@ -3238,15 +3414,18 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
 
             <!-- EXECUTIVE BANNER HEADER (COMPACT) -->
-            <div class="ps-header-block" style="position: relative; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 8px 14px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
-                <div>
-                    <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; opacity: 0.9; margin-bottom: 1px;">📐 TOÁN MATSUDA AI • HỆ THỐNG ĐÁNH GIÁ SƯ PHẠM THCS</div>
-                    <div style="font-size: 15px; font-weight: 800; letter-spacing: 0.3px; line-height: 1.2;">PHIẾU BÁO ĐIỂM & ĐÁNH GIÁ NĂNG LỰC TOÁN HỌC</div>
-                    <div style="font-size: 10px; opacity: 0.92; margin-top: 1px;">Phân tích sư phạm chuyên sâu • Nhận diện lỗi gốc & Hướng dẫn sửa từng bước</div>
+            <div class="ps-header-block" style="position: relative; background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%); color: #ffffff; padding: 7px 12px; border-radius: 6px; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 9px;">
+                    <img src="assets/icons/app-logo.png" alt="Toán Matsuda AI" style="width: 34px; height: 34px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); border: 1.5px solid rgba(255,255,255,0.4); flex-shrink: 0; object-fit: contain;">
+                    <div>
+                        <div style="font-size: 8.5px; text-transform: uppercase; letter-spacing: 1.1px; opacity: 0.9; margin-bottom: 1px;">TOÁN MATSUDA AI • HỆ THỐNG ĐÁNH GIÁ SƯ PHẠM THCS</div>
+                        <div style="font-size: 14.5px; font-weight: 800; letter-spacing: 0.3px; line-height: 1.2;">PHIẾU BÁO ĐIỂM & ĐÁNH GIÁ NĂNG LỰC TOÁN HỌC</div>
+                        <div style="font-size: 9.5px; opacity: 0.92; margin-top: 1px;">Phân tích sư phạm chuyên sâu • Nhận diện lỗi gốc & Hướng dẫn sửa từng bước</div>
+                    </div>
                 </div>
-                <div style="text-align: right; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 5px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); min-width: 90px;">
-                    <div style="font-size: 9px; text-transform: uppercase; letter-spacing: 0.5px;">Xếp loại</div>
-                    <div style="font-size: 12.5px; font-weight: 800;">${scoreTier.badge}</div>
+                <div style="text-align: right; background: rgba(255,255,255,0.18); padding: 4px 10px; border-radius: 5px; backdrop-filter: blur(4px); border: 1px solid rgba(255,255,255,0.3); min-width: 85px;">
+                    <div style="font-size: 8.5px; text-transform: uppercase; letter-spacing: 0.5px;">Xếp loại</div>
+                    <div style="font-size: 12px; font-weight: 800;">${scoreTier.badge}</div>
                 </div>
             </div>
 
@@ -3644,16 +3823,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (window.html2pdf) {
             const opt = {
-                margin: [6, 8, 6, 8],
+                margin: [4, 6, 4, 6], // 4mm trên, 6mm phải, 4mm dưới, 6mm trái
                 filename: fileName,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { scale: 2, useCORS: true, logging: false },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    scrollY: 0,
+                    scrollX: 0,
+                    y: 0,
+                    x: 0,
+                    windowWidth: 794
+                },
                 jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                 pagebreak: { mode: ['css', 'legacy'], avoid: ['.ps-step-avoid', '.ps-signatures-block', '.ps-card-avoid'] }
             };
 
             const wrapper = document.getElementById('export-sheet-wrapper');
             wrapper.style.display = 'block';
+            wrapper.style.position = 'fixed';
+            wrapper.style.top = '0px';
+            wrapper.style.left = '0px';
+            wrapper.style.zIndex = '-9999';
             try {
                 await window.html2pdf().set(opt).from(sheet).save();
                 showToast(`Đã xuất file PDF cho học sinh ${sName}!`, 'success');
@@ -3677,10 +3869,19 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.html2canvas) {
             const wrapper = document.getElementById('export-sheet-wrapper');
             wrapper.style.display = 'block';
+            wrapper.style.position = 'fixed';
+            wrapper.style.top = '0px';
+            wrapper.style.left = '0px';
+            wrapper.style.zIndex = '-9999';
             try {
                 const canvas = await window.html2canvas(sheet, {
                     scale: 2,
                     useCORS: true,
+                    scrollY: 0,
+                    scrollX: 0,
+                    y: 0,
+                    x: 0,
+                    windowWidth: 794,
                     backgroundColor: '#ffffff'
                 });
 
@@ -5355,6 +5556,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zip = new window.JSZip();
                 const wrapper = document.getElementById('export-sheet-wrapper');
                 wrapper.style.display = 'block';
+                wrapper.style.position = 'fixed';
+                wrapper.style.top = '0px';
+                wrapper.style.left = '0px';
+                wrapper.style.zIndex = '-9999';
 
                 for (let i = 0; i < doneStudents.length; i++) {
                     const s = doneStudents[i];
@@ -5368,9 +5573,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
 
                     const opt = {
-                        margin: [6, 8, 6, 8],
+                        margin: [4, 6, 4, 6],
                         image: { type: 'jpeg', quality: 0.98 },
-                        html2canvas: { scale: 2, useCORS: true, logging: false },
+                        html2canvas: {
+                            scale: 2,
+                            useCORS: true,
+                            logging: false,
+                            scrollY: 0,
+                            scrollX: 0,
+                            y: 0,
+                            x: 0,
+                            windowWidth: 794
+                        },
                         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
                         pagebreak: { mode: ['css', 'legacy'], avoid: ['.ps-step-avoid', '.ps-signatures-block', '.ps-card-avoid'] }
                     };
@@ -5423,6 +5637,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 const zip = new window.JSZip();
                 const wrapper = document.getElementById('export-sheet-wrapper');
                 wrapper.style.display = 'block';
+                wrapper.style.position = 'fixed';
+                wrapper.style.top = '0px';
+                wrapper.style.left = '0px';
+                wrapper.style.zIndex = '-9999';
 
                 for (let i = 0; i < doneStudents.length; i++) {
                     const s = doneStudents[i];
@@ -5438,6 +5656,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const canvas = await window.html2canvas(sheet, {
                         scale: 2,
                         useCORS: true,
+                        scrollY: 0,
+                        scrollX: 0,
+                        y: 0,
+                        x: 0,
+                        windowWidth: 794,
                         backgroundColor: '#ffffff'
                     });
 
