@@ -511,6 +511,372 @@ app.post(
   }
 });
 
+// ========================================================
+// MỤC 1: GIA SƯ SOCRATIC AI - DẪN DẮT TƯ DUY, KHÔNG GIẢI HỘ
+// ========================================================
+app.post(['/api/tutor/socratic', '/api/v1/tutor/socratic'], async (req: Request, res: Response) => {
+  try {
+    const customKey = (req.headers['x-api-key'] || req.headers['x-gemini-api-key']) as string | undefined;
+    const ai = getGeminiClient(customKey);
+
+    const { problem, context, level, studentMessage, chatHistory, mode } = req.body || {};
+    if (!problem && !studentMessage) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp đề bài toán hoặc câu hỏi thắc mắc của bạn.',
+      });
+    }
+
+    const socraticSystemInstruction = `Bạn là Gia sư Socratic môn Toán THCS thuộc nền tảng TOÁN MATSUDA AI (Thầy/Cô Matsuda AI).
+TÔN CHỈ SƯ PHẠM CỐT LÕI: Dẫn dắt tư duy từng nấc (Scaffolding / Socratic). Tuyệt đối KHÔNG giải hộ hay tuôn ra toàn bộ đáp án ngay từ đầu để học sinh tự mình tư duy và làm chủ kiến thức.
+
+CÁC CẤP ĐỘ GỢI Ý (3 NẤC GỢI MỞ):
+1. Khi level = 'hint1' (GỢI Ý 1 - Nhẹ: Khái niệm & Công thức nền tảng):
+   - Nhắc lại định nghĩa, tính chất, định lý hoặc công thức Toán học chuẩn cần áp dụng (Ví dụ: Quy tắc dấu lũy thừa $(-a)^{2n} = a^{2n}$ và $(-a)^{2n+1} = -a^{2n+1}$, lũy thừa của một tích $(x \\cdot y)^n = x^n \\cdot y^n$, nhân chia lũy thừa cùng cơ số, phân tích cơ số ra thừa số nguyên tố...).
+   - Đặt 1 câu hỏi gợi mở ngắn gọn kích thích học sinh tự đối chiếu vào bài của mình.
+   - TUYỆT ĐỐI CHƯA tính toán hộ hay ghi kết quả số cụ thể của bài toán.
+
+2. Khi level = 'hint2' (GỢI Ý 2 - Vừa: Hướng biến đổi & Nút thắt tư duy):
+   - Chỉ ra điểm mấu chốt và hướng dẫn bước biến đổi đầu tiên (Ví dụ: "Trước hết em hãy biến đổi cơ số $6 = 2 \\cdot 3$, $(-12)^6 = 12^6 = (2^2 \\cdot 3)^6$ xem tử số thành gì nhé...").
+   - Gợi ý cách bước 2 kết nối với bước 1, sau đó dừng lại để học sinh tự làm tiếp.
+
+3. Khi level = 'hint3' (GỢI Ý 3 - Sâu: Dẫn dắt chi tiết từng bước):
+   - Dành cho khi học sinh thực sự bế tắc hoặc muốn đối chiếu sâu: Phân tích tường minh từng bước suy luận, giải thích rõ nguyên nhân "Tại sao lại biến đổi như vậy" theo chuẩn sư phạm THCS.
+
+4. Khi level = 'chat' (Đàm thoại Socratic trực tiếp cùng học sinh):
+   - Đóng vai người thầy ân cần, kiên nhẫn, khen ngợi tinh thần tự học của em.
+   - Nếu học sinh đưa ra dự đoán hoặc câu trả lời nháp: Chỉ ra chỗ em đã làm đúng để khích lệ, phân tích nhẹ nhàng chỗ em nhầm (nếu có), và đặt câu hỏi để em tự sửa.
+   - Nếu học sinh nói "Cho em đáp án luôn đi thầy": Nhẹ nhàng từ chối giải hộ, động viên em giải từng bước cùng thầy cô.
+
+QUY TẮC TOÁN HỌC & LATEX:
+- BẮT BUỘC bọc mọi ký hiệu, số liệu, công thức toán học trong cặp dấu $...$ (inline) hoặc $$...$$ (block).
+- Phép nhân dùng \\cdot (TUYỆT ĐỐI KHÔNG dùng \\times để tránh lỗi ký tự escape), phân số dùng \\frac{a}{b}, lũy thừa luôn bọc ngoặc nhọn.
+- Giọng văn: Tiếng Việt sư phạm chuẩn mực, ấm áp, truyền cảm hứng học Toán.`;
+
+    let activeSystemInstruction = socraticSystemInstruction;
+    if (mode === 'teacher') {
+      activeSystemInstruction = `Bạn là Trợ lý Giáo viên & Chuyên gia Cố vấn Sư phạm Toán THCS của TOÁN MATSUDA AI.
+Đối tượng trao đổi: Thầy / Cô giáo bộ môn Toán.
+Phong cách làm việc: Chuyên nghiệp, chuẩn mực sư phạm Việt Nam (Chương trình GDPT 2018).
+Nhiệm vụ: Hỗ trợ giáo viên giải đáp sư phạm, soạn đề toán phân hóa, hoàn thiện tin nhắn gửi phụ huynh hoặc đề xuất hoạt động dạy học.
+
+QUY TẮC CÔNG THỨC TOÁN:
+- BẮT BUỘC bọc mọi ký hiệu, số liệu, công thức toán học trong cặp dấu $...$ (inline) hoặc $$...$$ (block).
+- Phép nhân dùng \\cdot (TUYỆT ĐỐI KHÔNG dùng \\times để tránh lỗi ký tự escape), phân số dùng \\frac{a}{b}, lũy thừa luôn bọc ngoặc nhọn.`;
+    }
+
+    let userPrompt = '';
+    if (level === 'hint1') {
+      userPrompt = `Đề bài toán: ${problem || ''}\n${context ? `Ngữ cảnh lỗi sai của học sinh: ${context}\n` : ''}Hãy đưa ra GỢI Ý 1 (Nhẹ: Nhắc lại công thức / định lý / quy tắc toán học cần dùng và 1 câu hỏi gợi mở, chưa tính hộ số liệu).`;
+    } else if (level === 'hint2') {
+      userPrompt = `Đề bài toán: ${problem || ''}\n${context ? `Ngữ cảnh lỗi sai của học sinh: ${context}\n` : ''}Hãy đưa ra GỢI Ý 2 (Vừa: Hướng dẫn bước biến đổi đầu tiên và chỉ ra nút thắt tư duy để học sinh tự làm tiếp).`;
+    } else if (level === 'hint3') {
+      userPrompt = `Đề bài toán: ${problem || ''}\n${context ? `Ngữ cảnh lỗi sai của học sinh: ${context}\n` : ''}Hãy đưa ra GỢI Ý 3 (Sâu: Dẫn dắt chi tiết từng bước suy luận sư phạm để học sinh thông suốt phương pháp).`;
+    } else {
+      userPrompt = `Đề bài toán: ${problem || 'Không có đề bài cụ thể'}\n${context ? `Ngữ cảnh bài làm: ${context}\n` : ''}`;
+      if (Array.isArray(chatHistory) && chatHistory.length > 0) {
+        userPrompt += `Lịch sử trao đổi trước đó:\n` + chatHistory.map((m: any) => `${m.role === 'model' ? (mode === 'teacher' ? 'Trợ lý AI' : 'Gia sư AI') : (mode === 'teacher' ? 'Giáo viên' : 'Học sinh')}: ${m.text}`).join('\n') + `\n`;
+      }
+      userPrompt += `Câu hỏi / yêu cầu mới từ ${mode === 'teacher' ? 'Thầy/Cô' : 'học sinh'}: "${studentMessage || 'Em cần thầy/cô hướng dẫn gợi ý phương pháp giải bài này ạ'}"`;
+    }
+
+    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+    let replyText = '';
+
+    for (const m of candidateModels) {
+      try {
+        const resp = await ai.models.generateContent({
+          model: m,
+          contents: userPrompt,
+          config: {
+            systemInstruction: activeSystemInstruction,
+            temperature: 0.35,
+          },
+        });
+        if (resp.text) {
+          replyText = resp.text;
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`Socratic model ${m} failed:`, err.message);
+      }
+    }
+
+    if (!replyText) {
+      replyText = 'Thầy/Cô Matsuda AI đang kết nối tư duy cùng em. Em hãy kiểm tra lại đề bài hoặc thử diễn đạt lại câu hỏi nhé!';
+    }
+
+    // Làm sạch triệt để lỗi escape toán học
+    replyText = replyText
+      .replace(/[\t\\]?imes\b/g, '\\cdot')
+      .replace(/\\times\b/g, '\\cdot')
+      .replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2')
+      .replace(/[\t\\]?ext\{/g, '\\text{')
+      .replace(/[\x08\\]?oxed\{/g, '\\boxed{')
+      .replace(/[\x0c\\]?rac\{/g, '\\frac{')
+      .replace(/[\x08\\]?egin\{/g, '\\begin{');
+
+    return res.json({
+      success: true,
+      level: level || 'chat',
+      reply: replyText,
+    });
+  } catch (error: any) {
+    console.error('Lỗi Socratic Tutor:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Gia sư AI tạm thời bận. Em vui lòng bấm thử lại nhé!',
+    });
+  }
+});
+
+// ========================================================
+// MỤC 2: THỬ SỨC LÀM LẠI TẠI CHỖ (INTERACTIVE SCRATCHPAD VERIFIER)
+// ========================================================
+app.post(['/api/tutor/verify-scratchpad', '/api/v1/tutor/verify-scratchpad'], async (req: Request, res: Response) => {
+  try {
+    const customKey = (req.headers['x-api-key'] || req.headers['x-gemini-api-key']) as string | undefined;
+    const ai = getGeminiClient(customKey);
+
+    const { problem, context, scratchpadText, scratchpadImage } = req.body || {};
+    if (!scratchpadText && !scratchpadImage) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng nhập lời giải làm lại hoặc tải lên ảnh nháp của bạn.',
+      });
+    }
+
+    const verifySystemPrompt = `Bạn là Giám khảo & Gia sư Socratic TOÁN MATSUDA AI.
+Nhiệm vụ: Chấm và đánh giá bài làm lại / bước làm lại thử sức tại chỗ (Interactive Scratchpad) của học sinh THCS.
+
+YÊU CẦU ĐÁNH GIÁ:
+1. So sánh bài làm lại của học sinh với Đề bài và Ngữ cảnh lỗi sai trước đó (nếu có).
+2. Xác định:
+   - isCorrect: true nếu bước/lời giải làm lại đã hoàn toàn đúng đắn về mặt toán học.
+   - isProgress: true nếu học sinh đã sửa được lỗi sai cũ (dù có thể còn sót sơ suất khác) hoặc thể hiện sự tiến bộ rõ rệt.
+   - evaluationTitle: Tiêu đề khích lệ ngắn gọn (Ví dụ: "🎉 Xuất sắc! Em đã khắc phục hoàn toàn lỗi sai", "💡 Rất tốt! Em đã sửa được dấu nhưng còn một chút sơ suất", "⚠️ Hãy quan sát kỹ lại số mũ nhé").
+   - feedback: Nhận xét chi tiết, giải thích rõ bước làm lại đúng ở đâu, còn nhầm chỗ nào nếu có.
+   - nextAdvice: Lời khuyên bước tiếp theo cho học sinh.
+
+QUY TẮC TOÁN HỌC:
+- Mọi công thức Toán viết theo cú pháp LaTeX bọc trong $...$ hoặc $$...$$.
+- Phép nhân dùng \\cdot (TUYỆT ĐỐI KHÔNG dùng \\times để tránh lỗi escape), phân số dùng \\frac{a}{b}, lũy thừa luôn bọc ngoặc {}.
+- Giọng điệu ấm áp, khen ngợi tinh thần tự giác sửa bài của học sinh.`;
+
+    const contents: any[] = [];
+    let promptText = `Đề bài toán: ${problem || 'Không có đề bài cụ thể'}\n`;
+    if (context) {
+      promptText += `Ngữ cảnh lỗi sai học sinh từng mắc phải: ${context}\n`;
+    }
+    if (scratchpadText) {
+      promptText += `Học sinh thử sức làm lại như sau:\n"${scratchpadText}"\n`;
+    }
+    promptText += `Hãy đánh giá xem lời giải làm lại này đã đúng chưa và học sinh đã khắc phục được lỗi sai chưa.`;
+
+    const parts: any[] = [{ text: promptText }];
+
+    // If an image of scratchpad was provided
+    if (scratchpadImage && typeof scratchpadImage === 'string') {
+      const match = scratchpadImage.match(/^data:([^;]+);base64,(.+)$/);
+      if (match) {
+        parts.unshift({
+          inlineData: {
+            mimeType: match[1],
+            data: match[2],
+          },
+        });
+      }
+    }
+
+    const responseSchema = {
+      type: Type.OBJECT,
+      properties: {
+        isCorrect: { type: Type.BOOLEAN, description: 'True nếu lời giải làm lại hoàn toàn chính xác' },
+        isProgress: { type: Type.BOOLEAN, description: 'True nếu học sinh có tiến bộ hoặc sửa được lỗi cũ' },
+        evaluationTitle: { type: Type.STRING, description: 'Tiêu đề đánh giá khích lệ' },
+        feedback: { type: Type.STRING, description: 'Nhận xét chi tiết kèm công thức LaTeX' },
+        nextAdvice: { type: Type.STRING, description: 'Lời khuyên bước tiếp theo' },
+      },
+      required: ['isCorrect', 'isProgress', 'evaluationTitle', 'feedback', 'nextAdvice'],
+    };
+
+    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+    let resultJson: any = null;
+
+    for (const m of candidateModels) {
+      try {
+        const resp = await ai.models.generateContent({
+          model: m,
+          contents: { parts },
+          config: {
+            systemInstruction: verifySystemPrompt,
+            responseMimeType: 'application/json',
+            responseSchema,
+            temperature: 0.2,
+          },
+        });
+        if (resp.text) {
+          resultJson = JSON.parse(resp.text);
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`Scratchpad verify model ${m} failed:`, err.message);
+      }
+    }
+
+    if (!resultJson) {
+      resultJson = {
+        isCorrect: false,
+        isProgress: true,
+        evaluationTitle: 'Gia sư AI đã ghi nhận bài làm lại của em',
+        feedback: 'Thầy/Cô thấy em đã rất nỗ lực thử sức lại. Hãy cùng đối chiếu từng bước với gợi ý nhé!',
+        nextAdvice: 'Em hãy thử bấm Gợi ý 2 để xem hướng biến đổi mấu chốt nhé.',
+      };
+    }
+
+    // Sanitize LaTeX math
+    const cleanMath = (str: string) => {
+      if (!str) return '';
+      return str
+        .replace(/[\t\\]?imes\b/g, '\\cdot')
+        .replace(/\\times\b/g, '\\cdot')
+        .replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2')
+        .replace(/[\t\\]?ext\{/g, '\\text{')
+        .replace(/[\x08\\]?oxed\{/g, '\\boxed{')
+        .replace(/[\x0c\\]?rac\{/g, '\\frac{');
+    };
+
+    resultJson.evaluationTitle = cleanMath(resultJson.evaluationTitle);
+    resultJson.feedback = cleanMath(resultJson.feedback);
+    resultJson.nextAdvice = cleanMath(resultJson.nextAdvice);
+
+    return res.json({
+      success: true,
+      ...resultJson,
+    });
+  } catch (error: any) {
+    console.error('Lỗi verify-scratchpad:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Không thể đánh giá nháp lúc này. Em vui lòng thử lại nhé!',
+    });
+  }
+});
+
+// ========================================================
+// MỤC 3: TRỢ LÝ GIÁO VIÊN (TEACHER ASSISTANT MODE)
+// ========================================================
+app.post(['/api/tutor/teacher-assist', '/api/v1/tutor/teacher-assist'], async (req: Request, res: Response) => {
+  try {
+    const customKey = (req.headers['x-api-key'] || req.headers['x-gemini-api-key']) as string | undefined;
+    const ai = getGeminiClient(customKey);
+
+    const { action, problem, context, studentName, teacherName, schoolName } = req.body || {};
+    if (!problem && !context) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp đề bài toán hoặc ngữ cảnh bài làm.',
+      });
+    }
+
+    const teacherSystemInstruction = `Bạn là Chuyên gia Cố vấn Sư phạm Toán THCS và Trợ lý Giáo viên đắc lực thuộc TOÁN MATSUDA AI.
+Phong cách làm việc: Chuyên nghiệp, chuẩn mực sư phạm Việt Nam (Chương trình GDPT 2018), hỗ trợ giáo viên tiết kiệm tối đa thời gian soạn bài và trao đổi với phụ huynh.
+
+QUY TẮC CÔNG THỨC TOÁN:
+- BẮT BUỘC bọc mọi ký hiệu, số liệu, công thức toán học trong cặp dấu $...$ (inline) hoặc $$...$$ (block).
+- Phép nhân dùng \\cdot (TUYỆT ĐỐI KHÔNG dùng \\times để tránh lỗi ký tự escape), phân số dùng \\frac{a}{b}, lũy thừa luôn bọc ngoặc {}.`;
+
+    let userPrompt = '';
+    if (action === 'generate_exercises') {
+      userPrompt = `Dựa vào đề bài toán sau:
+Đề bài gốc: ${problem}
+${context ? `Lỗi sai học sinh thường mắc phải: ${context}` : ''}
+
+Hãy soạn 3 bài tập toán mới cùng dạng kiến thức, phân hóa theo 3 cấp độ rõ ràng:
+1. Mức độ Dễ (Nhận biết / Thông hiểu - Củng cố công thức trực tiếp)
+2. Mức độ Vừa (Vận dụng - Tương đương bài gốc nhưng đổi số liệu để học sinh tự luyện)
+3. Mức độ Nâng cao (Vận dụng cao - Mở rộng tư duy toán học)
+
+Mỗi bài tập phải có đầy đủ:
+- Đề bài (viết bằng LaTeX chuẩn $...$)
+- Gợi ý tư duy nhanh cho học sinh
+- Đáp số và lời giải tóm tắt chuẩn xác.`;
+    } else if (action === 'parent_message') {
+      userPrompt = `Dựa vào kết quả bài làm toán của học sinh:
+- Học sinh: ${studentName || 'em học sinh'}
+- Giáo viên: ${teacherName || 'Thầy/Cô bộ môn Toán'}
+- Trường: ${schoolName || ''}
+- Đề bài: ${problem}
+- Điểm cần khắc phục / Lỗi sai: ${context || 'Cần chú ý cẩn thận hơn trong các bước tính toán và quy tắc biến đổi'}
+
+Hãy soạn một mẫu tin nhắn Zalo / Sổ liên lạc điện tử gửi phụ huynh:
+- Lời chào trân trọng, lịch sự, chuẩn mực nhà giáo.
+- Điểm tích cực: Khen ngợi tinh thần làm bài và nỗ lực của em.
+- Điểm cần phối hợp: Chỉ rõ cụ thể lỗi sai/lỗ hổng kiến thức em đang gặp phải một cách tích cực, mang tính xây dựng.
+- Lời dặn dò: Nhờ phụ huynh nhắc em làm thêm bài tập rèn luyện củng cố (hệ thống Toán Matsuda AI đã đính kèm bài tập tương tự).
+- Lời chúc và cảm ơn chân thành.`;
+    } else {
+      // pedagogical_analysis
+      userPrompt = `Dựa vào bài toán và lỗi sai của học sinh:
+- Đề bài: ${problem}
+- Lỗi sai phát hiện: ${context || 'Học sinh biến đổi sai quy tắc toán học'}
+
+Hãy phân tích sư phạm chuyên sâu cho giáo viên:
+1. NGUYÊN NHÂN GỐC RỄ (Chướng ngại nhận thức / Lỗ hổng kiến thức tiền đề khiến học sinh dễ mắc lỗi này).
+2. THỐNG KÊ LỖI PHỔ BIẾN (Những bẫy toán học học sinh hay gặp ở dạng bài này).
+3. GỢI Ý HOẠT ĐỘNG KHỞI ĐỘNG 5 PHÚT (Một câu hỏi hoặc mini-game 5 phút đầu giờ tiết sau để giáo viên củng cố cho cả lớp).`;
+    }
+
+    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+    let replyText = '';
+
+    for (const m of candidateModels) {
+      try {
+        const resp = await ai.models.generateContent({
+          model: m,
+          contents: userPrompt,
+          config: {
+            systemInstruction: teacherSystemInstruction,
+            temperature: 0.3,
+          },
+        });
+        if (resp.text) {
+          replyText = resp.text;
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`Teacher assist model ${m} failed:`, err.message);
+      }
+    }
+
+    if (!replyText) {
+      replyText = 'Trợ lý Giáo viên đang kết nối, Thầy/Cô vui lòng bấm thử lại nhé!';
+    }
+
+    // Làm sạch triệt để lỗi escape toán học
+    replyText = replyText
+      .replace(/[\t\\]?imes\b/g, '\\cdot')
+      .replace(/\\times\b/g, '\\cdot')
+      .replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2')
+      .replace(/[\t\\]?ext\{/g, '\\text{')
+      .replace(/[\x08\\]?oxed\{/g, '\\boxed{')
+      .replace(/[\x0c\\]?rac\{/g, '\\frac{')
+      .replace(/[\x08\\]?egin\{/g, '\\begin{');
+
+    return res.json({
+      success: true,
+      action,
+      reply: replyText,
+    });
+  } catch (error: any) {
+    console.error('Lỗi teacher-assist:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Trợ lý Giáo viên tạm thời bận. Thầy/Cô vui lòng thử lại nhé!',
+    });
+  }
+});
+
 // Explicit method-not-allowed for upload endpoint when called with non-POST
 app.all(['/api/v1/upload', '/api/v1/upload/', '/api/upload'], (req: Request, res: Response) => {
   return res.status(405).json({

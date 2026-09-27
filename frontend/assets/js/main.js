@@ -1824,6 +1824,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
 
                     <div class="remedial-interactive-tools">
+                        <button type="button" class="btn-remedial-toggle btn-socratic-ask-inline" onclick="window.askSocraticAboutRemedial('${rm.id}')" title="Cùng Gia sư Socratic giải bài này từng bước">
+                            🤖 Cùng Gia sư giải bài này
+                        </button>
                         <button type="button" class="btn-remedial-toggle btn-toggle-hint" data-id="${rm.id}">
                             💡 Xem gợi ý tư duy
                         </button>
@@ -2072,7 +2075,10 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <span class="q-index-badge">Câu ${qId}</span>
                                 ${classBadgeHtml}
                             </div>
-                            <div style="display: flex; gap: 10px; align-items: center;">
+                            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                                <button type="button" class="btn-socratic-ask-inline" onclick="window.askSocraticAboutQuestion(${idx})" title="Mở Gia sư Socratic để được gợi mở từng nấc cho câu này">
+                                    🤖 Hỏi Gia sư Socratic
+                                </button>
                                 <span class="q-score">${qScore}/${qMax}</span>
                                 <span class="q-badge ${badgeClass}">${icon} ${resultText}</span>
                             </div>
@@ -2216,7 +2222,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 <div class="analysis-steps-list">
                         `;
 
-                        q.analysis.forEach(step => {
+                        q.analysis.forEach((step, sIdx) => {
                             const isFirstErr = !!step.isFirstError;
                             const isCascading = step.status === 'cascading_error' || !!step.isFollowUpError;
                             const isIndependentErr = !!step.isIndependentError;
@@ -2377,6 +2383,15 @@ document.addEventListener('DOMContentLoaded', () => {
                                     </div>
                                 `;
                             }
+
+                            // Mục 2: Nút Hỏi Gia sư AI về bước này (tự động nạp sâu ngữ cảnh bước giải)
+                            qHtml += `
+                                <div class="step-socratic-action-bar">
+                                    <button type="button" class="btn-socratic-step-ask ${!isCorrect ? 'has-error' : ''}" onclick="window.askSocraticAboutStep(${idx}, ${sIdx})" title="Nhờ Gia sư Socratic dẫn dắt tháo gỡ lỗi sai ở Bước ${step.stepNumber}">
+                                        🤖 Hỏi Gia sư về Bước ${step.stepNumber} này
+                                    </button>
+                                </div>
+                            `;
 
                             qHtml += `</div>`; // Close analysis-step-item
                         });
@@ -6021,5 +6036,1055 @@ document.addEventListener('DOMContentLoaded', () => {
         deferredPwaPrompt = null;
         showToast('🎉 Chúc mừng! Ứng dụng Toán Matsuda AI đã sẵn sàng hoạt động như App độc lập trên thiết bị.', 'success');
     });
+
+    // ========================================================
+    // MỤC 1: GIA SƯ SOCRATIC AI - DẪN DẮT TƯ DUY, KHÔNG GIẢI HỘ
+    // ========================================================
+    const socraticModal = document.getElementById('socratic-tutor-modal');
+    const socraticProblemInput = document.getElementById('socratic-problem-input');
+    const socraticContextBadge = document.getElementById('socratic-context-badge');
+    const socraticContextPreview = document.getElementById('socratic-context-preview');
+    const socraticChatHistory = document.getElementById('socratic-chat-history');
+    const socraticUserMsgInput = document.getElementById('socratic-user-msg-input');
+    const btnSocraticSend = document.getElementById('btn-socratic-send');
+    const btnCloseSocraticModal = document.getElementById('btn-close-socratic-modal');
+    const btnOpenSocraticTutor = document.getElementById('btn-open-socratic-tutor');
+    const cardFeatureTutor = document.getElementById('card-feature-tutor');
+    const btnSocraticHint1 = document.getElementById('btn-socratic-hint-1');
+    const btnSocraticHint2 = document.getElementById('btn-socratic-hint-2');
+    const btnSocraticHint3 = document.getElementById('btn-socratic-hint-3');
+    const btnClearSocraticChat = document.getElementById('btn-clear-socratic-chat');
+
+    let socraticActiveContext = '';
+    let socraticMessageLog = []; // [{ role: 'user' | 'model', text: string }]
+
+    function openSocraticTutor(problemText = '', contextText = '') {
+        if (!socraticModal) return;
+
+        if (problemText) {
+            socraticProblemInput.value = problemText.trim();
+        } else if (!socraticProblemInput.value.trim() && currentGradingData && currentGradingData.questions && currentGradingData.questions.length > 0) {
+            // Tự động gợi ý câu hỏi đầu tiên hoặc câu bị trừ điểm nhiều nhất
+            const failedQ = currentGradingData.questions.find(q => q.result === 'Sai' || q.status === 'incorrect') || currentGradingData.questions[0];
+            if (failedQ) {
+                socraticProblemInput.value = failedQ.problemStatementLatex || `Câu ${failedQ.questionId || '1'}`;
+                if (failedQ.feedback) contextText = failedQ.feedback;
+            }
+        }
+
+        socraticActiveContext = contextText ? contextText.trim() : '';
+
+        if (socraticActiveContext) {
+            if (socraticContextBadge) socraticContextBadge.classList.remove('hidden');
+            if (socraticContextPreview) {
+                socraticContextPreview.innerHTML = `<strong>⚠️ Ngữ cảnh bài làm:</strong> ${formatMathText(socraticActiveContext)}`;
+                socraticContextPreview.classList.remove('hidden');
+            }
+        } else {
+            if (socraticContextBadge) socraticContextBadge.classList.add('hidden');
+            if (socraticContextPreview) socraticContextPreview.classList.add('hidden');
+        }
+
+        socraticModal.classList.remove('hidden');
+        setTimeout(() => {
+            if (socraticUserMsgInput) socraticUserMsgInput.focus();
+        }, 150);
+    }
+
+    function closeSocraticTutor() {
+        if (socraticModal) {
+            socraticModal.classList.add('hidden');
+        }
+    }
+
+    function appendSocraticBubble(role, contentText, hintLevel = null) {
+        if (!socraticChatHistory) return;
+
+        const welcomeCard = document.getElementById('socratic-welcome-card');
+        if (welcomeCard && socraticMessageLog.length > 0) {
+            welcomeCard.style.display = 'none';
+        }
+
+        const row = document.createElement('div');
+        row.className = `socratic-msg-row ${role} fade-in`;
+
+        if (role === 'model') {
+            const avatar = document.createElement('div');
+            avatar.className = 'socratic-msg-avatar';
+            avatar.innerHTML = currentTutorMode === 'teacher' ? '👨‍🏫' : '🤖';
+            row.appendChild(avatar);
+        }
+
+        let bubbleClassLevel = '';
+        if (hintLevel === 'hint1' || hintLevel === 'teacher1') bubbleClassLevel = 'hint-level-1';
+        else if (hintLevel === 'hint2' || hintLevel === 'teacher2') bubbleClassLevel = 'hint-level-2';
+        else if (hintLevel === 'hint3' || hintLevel === 'teacher3') bubbleClassLevel = 'hint-level-3';
+
+        const bubble = document.createElement('div');
+        bubble.className = `socratic-bubble ${bubbleClassLevel}`;
+
+        if (hintLevel) {
+            const tag = document.createElement('div');
+            let tagNum = '1';
+            let tagText = '';
+
+            if (hintLevel === 'hint1') { tagNum = '1'; tagText = '💡 GỢI Ý 1: CÔNG THỨC & ĐỊNH LÝ'; }
+            else if (hintLevel === 'hint2') { tagNum = '2'; tagText = '🔍 GỢI Ý 2: HƯỚNG ĐI & NÚT THẮT'; }
+            else if (hintLevel === 'hint3') { tagNum = '3'; tagText = '📘 GỢI Ý 3: DẪN DẮT CHI TIẾT'; }
+            else if (hintLevel === 'teacher1') { tagNum = '1'; tagText = '📚 SOẠN 3 BÀI TẬP PHÂN HÓA (DỄ - VỪA - NÂNG CAO)'; }
+            else if (hintLevel === 'teacher2') { tagNum = '2'; tagText = '💬 TIN NHẮN ZALO MẪU GỬI PHỤ HUYNH'; }
+            else if (hintLevel === 'teacher3') { tagNum = '3'; tagText = '📊 PHÂN TÍCH SƯ PHẠM & TIẾT HỌC SAU'; }
+
+            tag.className = `socratic-badge-hint-tag tag-${tagNum}`;
+            tag.innerText = tagText;
+            bubble.appendChild(tag);
+        }
+
+        const textDiv = document.createElement('div');
+        textDiv.innerHTML = formatMathText(contentText);
+        bubble.appendChild(textDiv);
+
+        // Nút sao chép nội dung nhanh cho tin nhắn model
+        if (role === 'model') {
+            const copyBtn = document.createElement('button');
+            copyBtn.type = 'button';
+            copyBtn.className = 'btn-copy-bubble-content';
+            copyBtn.innerHTML = '📋 Sao chép nội dung';
+            copyBtn.onclick = () => {
+                navigator.clipboard.writeText(contentText).then(() => {
+                    showToast('Đã sao chép nội dung vào bộ nhớ tạm!', 'success');
+                }).catch(() => {
+                    showToast('Không thể sao chép tự động.', 'error');
+                });
+            };
+            bubble.appendChild(copyBtn);
+        }
+
+        row.appendChild(bubble);
+        socraticChatHistory.appendChild(row);
+        socraticChatHistory.scrollTop = socraticChatHistory.scrollHeight;
+
+        // Auto render math
+        if (window.renderMathInElement) {
+            try {
+                window.renderMathInElement(bubble, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '\\[', right: '\\]', display: true},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\(', right: '\\)', display: false}
+                    ],
+                    throwOnError: false
+                });
+            } catch (err) {}
+        }
+    }
+
+    function showSocraticTyping(customMessage = null) {
+        const id = 'socratic-typing-indicator';
+        const old = document.getElementById(id);
+        if (old) old.remove();
+
+        const defaultMsg = currentTutorMode === 'teacher' 
+            ? '👨‍🏫 Trợ lý Giáo viên đang phân tích và soạn bài...'
+            : 'Gia sư AI đang chuẩn bị gợi mở tư duy...';
+
+        const row = document.createElement('div');
+        row.id = id;
+        row.className = 'socratic-msg-row model fade-in';
+        row.innerHTML = `
+            <div class="socratic-msg-avatar">${currentTutorMode === 'teacher' ? '👨‍🏫' : '🤖'}</div>
+            <div class="socratic-bubble" style="background: #f1f5f9; color: #64748b; font-style: italic; font-size: 12.5px;">
+                <span class="step-icon">⏳</span> ${escapeHtml(customMessage || defaultMsg)}
+            </div>
+        `;
+        socraticChatHistory.appendChild(row);
+        socraticChatHistory.scrollTop = socraticChatHistory.scrollHeight;
+    }
+
+    function removeSocraticTyping() {
+        const el = document.getElementById('socratic-typing-indicator');
+        if (el) el.remove();
+    }
+
+    async function requestSocraticHint(level) {
+        const problem = socraticProblemInput ? socraticProblemInput.value.trim() : '';
+        if (!problem) {
+            showToast('⚠️ Vui lòng nhập đề bài hoặc nội dung câu hỏi trước nhé!', 'warning');
+            if (socraticProblemInput) socraticProblemInput.focus();
+            return;
+        }
+
+        const levelLabel = level === 'hint1' ? 'Gợi ý 1 (Nhẹ)' : (level === 'hint2' ? 'Gợi ý 2 (Vừa)' : 'Gợi ý 3 (Sâu)');
+        appendSocraticBubble('user', `⚡ Em xin Thầy/Cô ${levelLabel}`);
+        socraticMessageLog.push({ role: 'user', text: `Yêu cầu ${levelLabel}` });
+
+        showSocraticTyping();
+
+        try {
+            const resp = await fetch('/api/tutor/socratic', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    problem,
+                    context: socraticActiveContext,
+                    level,
+                    chatHistory: socraticMessageLog
+                })
+            });
+
+            const data = await resp.json();
+            removeSocraticTyping();
+
+            if (data.success && data.reply) {
+                appendSocraticBubble('model', data.reply, level);
+                socraticMessageLog.push({ role: 'model', text: data.reply });
+                recordGrowthActivity('hint', `Xem gợi ý ${levelLabel}`, problem || 'Bài toán', 10);
+            } else {
+                appendSocraticBubble('model', data.message || 'Thầy/Cô tạm thời chưa nhận được phản hồi, em vui lòng bấm lại nhé!');
+            }
+        } catch (err) {
+            removeSocraticTyping();
+            appendSocraticBubble('model', '⚠️ Kết nối mạng bị gián đoạn trong giây lát. Em hãy thử bấm lại nhé!');
+        }
+    }
+
+    async function sendSocraticChatMessage(customText = null) {
+        const problem = socraticProblemInput ? socraticProblemInput.value.trim() : '';
+        const msg = (customText || (socraticUserMsgInput ? socraticUserMsgInput.value : '')).trim();
+
+        if (!msg) return;
+
+        if (socraticUserMsgInput) socraticUserMsgInput.value = '';
+
+        appendSocraticBubble('user', msg);
+        socraticMessageLog.push({ role: 'user', text: msg });
+
+        showSocraticTyping();
+
+        try {
+            const resp = await fetch('/api/tutor/socratic', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    problem,
+                    context: socraticActiveContext,
+                    level: 'chat',
+                    studentMessage: msg,
+                    chatHistory: socraticMessageLog,
+                    mode: currentTutorMode
+                })
+            });
+
+            const data = await resp.json();
+            removeSocraticTyping();
+
+            if (data.success && data.reply) {
+                appendSocraticBubble('model', data.reply);
+                socraticMessageLog.push({ role: 'model', text: data.reply });
+            } else {
+                appendSocraticBubble('model', data.message || 'Thầy/Cô đang lắng nghe, em có thể diễn đạt thêm không?');
+            }
+        } catch (err) {
+            removeSocraticTyping();
+            appendSocraticBubble('model', '⚠️ Đang xảy ra gián đoạn mạng. Em hãy gửi lại câu hỏi nhé!');
+        }
+    }
+
+    // Window global functions for inline buttons
+    window.openSocraticTutorModal = openSocraticTutor;
+    window.closeSocraticTutorModal = closeSocraticTutor;
+
+    window.askSocraticAboutQuestion = function(idx) {
+        if (!currentGradingData || !currentGradingData.questions || !currentGradingData.questions[idx]) return;
+        const q = currentGradingData.questions[idx];
+        const problemText = q.problemStatementLatex || `Câu ${q.questionId || (idx + 1)}`;
+        
+        let contextParts = [];
+        if (q.classification) {
+            contextParts.push(`Dạng bài: ${q.classification.topic || ''} - ${q.classification.subtopic || ''}`);
+        }
+        if (q.analysis && Array.isArray(q.analysis)) {
+            const firstErr = q.analysis.find(s => s.isFirstError || s.status === 'incorrect');
+            if (firstErr) {
+                contextParts.push(`Lỗi sai tại Bước ${firstErr.stepNumber}: Học sinh viết ${firstErr.studentLatex || ''}. Nhận xét: ${firstErr.comment || ''}`);
+            }
+        }
+        if (q.feedback) {
+            contextParts.push(`Nhận xét tổng thể: ${q.feedback}`);
+        }
+
+        openSocraticTutor(problemText, contextParts.join('\n'));
+    };
+
+    // MỤC 2: HỎI GIA SƯ VỀ TỪNG BƯỚC GIẢI CỤ THỂ
+    window.askSocraticAboutStep = function(qIdx, sIdx) {
+        if (!currentGradingData || !currentGradingData.questions || !currentGradingData.questions[qIdx]) return;
+        const q = currentGradingData.questions[qIdx];
+        if (!q.analysis || !q.analysis[sIdx]) return;
+        const step = q.analysis[sIdx];
+        const problemText = q.problemStatementLatex || `Câu ${q.questionId || (qIdx + 1)}`;
+
+        const errType = step.isFirstError ? '🎯 LỖI ĐẦU TIÊN (GỐC)' : (step.status === 'cascading_error' || step.isFollowUpError ? '🔗 LỖI KÉO THEO' : (step.isIndependentError ? '⚡ LỖI ĐỘC LẬP' : 'CẦN HOÀN THIỆN'));
+        
+        const contextText = `Bước ${step.stepNumber}: Học sinh viết: "${step.studentLatex || step.studentText || ''}". Nhận định: ${errType}. ${step.comment ? `Nhận xét: ${step.comment}` : ''}`;
+
+        openSocraticTutor(problemText, contextText);
+
+        // Mở sẵn bảng nháp để học sinh sẵn sàng thử sức làm lại
+        const scratchpadBody = document.getElementById('scratchpad-body-content');
+        const btnToggleScratchpad = document.getElementById('btn-toggle-scratchpad');
+        if (scratchpadBody && scratchpadBody.classList.contains('hidden')) {
+            scratchpadBody.classList.remove('hidden');
+            if (btnToggleScratchpad) btnToggleScratchpad.innerHTML = 'Thu gọn bảng nháp ▴';
+        }
+
+        // Tự động gửi lời mở đầu đàm thoại từ Gia sư AI
+        const autoIntro = `Thầy/Cô thấy ở **Bước ${step.stepNumber}**, em viết $${step.studentLatex || step.studentText || ''}$. ${step.comment ? `Nhận xét: *${step.comment}*` : ''}\n\n👉 Em có muốn thử kiểm tra lại quy tắc biến đổi ở bước này, hoặc bấm **Gợi ý 1** để nhớ lại công thức không? Em cũng có thể gõ thử lời giải mới vào **Bảng nháp** phía trên nhé!`;
+        appendSocraticBubble('model', autoIntro);
+        socraticMessageLog.push({ role: 'model', text: autoIntro });
+    };
+
+    window.askSocraticAboutRemedial = function(rmId) {
+        const itemEl = document.querySelector(`.remedial-item-card[data-remedial-id="${rmId}"]`);
+        let prob = '';
+        let ctx = '';
+        if (itemEl) {
+            const probBody = itemEl.querySelector('.remedial-problem-body');
+            if (probBody) prob = probBody.innerText.replace('Đề bài rèn luyện:', '').trim();
+            const weakEl = itemEl.querySelector('[style*="color: #b91c1c"]');
+            if (weakEl) ctx = weakEl.innerText.replace('⚠️ Lỗ hổng cần khắc phục:', '').trim();
+        }
+        openSocraticTutor(prob || 'Bài tập củng cố kiến thức', ctx ? `Mục tiêu củng cố: ${ctx}` : '');
+
+        // Mở sẵn bảng nháp
+        const scratchpadBody = document.getElementById('scratchpad-body-content');
+        const btnToggleScratchpad = document.getElementById('btn-toggle-scratchpad');
+        if (scratchpadBody && scratchpadBody.classList.contains('hidden')) {
+            scratchpadBody.classList.remove('hidden');
+            if (btnToggleScratchpad) btnToggleScratchpad.innerHTML = 'Thu gọn bảng nháp ▴';
+        }
+
+        const autoIntro = `Chào em! Thầy/Cô đã nạp bài tập bổ trợ rèn luyện: **$${prob}$**.\n\n🎯 Mục tiêu: Giúp em làm chủ dạng bài này mà không bao giờ bị nhầm lẫn nữa. Em hãy thử biến đổi bước đầu tiên vào **Bảng nháp** phía trên hoặc bấm **Gợi ý 1** nhé!`;
+        appendSocraticBubble('model', autoIntro);
+        socraticMessageLog.push({ role: 'model', text: autoIntro });
+    };
+
+    // ========================================================
+    // MỤC 2: INTERACTIVE SCRATCHPAD CONTROLLER (CHẤM NHÁP TẠI CHỖ)
+    // ========================================================
+    const btnToggleScratchpad = document.getElementById('btn-toggle-scratchpad');
+    const scratchpadToggleHeader = document.getElementById('scratchpad-toggle-header');
+    const scratchpadBodyContent = document.getElementById('scratchpad-body-content');
+    const scratchpadTextInput = document.getElementById('scratchpad-text-input');
+    const scratchpadFileInput = document.getElementById('scratchpad-file-input');
+    const scratchpadImgName = document.getElementById('scratchpad-img-name');
+    const btnVerifyScratchpad = document.getElementById('btn-verify-scratchpad');
+    const scratchpadEvalResult = document.getElementById('scratchpad-eval-result');
+
+    let scratchpadUploadedImageBase64 = null;
+
+    function toggleScratchpad(forceOpen = null) {
+        if (!scratchpadBodyContent) return;
+        const willOpen = forceOpen !== null ? forceOpen : scratchpadBodyContent.classList.contains('hidden');
+        scratchpadBodyContent.classList.toggle('hidden', !willOpen);
+        if (btnToggleScratchpad) {
+            btnToggleScratchpad.innerHTML = willOpen ? 'Thu gọn bảng nháp ▴' : 'Mở rộng bảng nháp ▾';
+        }
+        if (willOpen && scratchpadTextInput) {
+            setTimeout(() => scratchpadTextInput.focus(), 100);
+        }
+    }
+
+    if (btnToggleScratchpad) btnToggleScratchpad.addEventListener('click', (e) => { e.stopPropagation(); toggleScratchpad(); });
+    if (scratchpadToggleHeader) scratchpadToggleHeader.addEventListener('click', () => toggleScratchpad());
+
+    // Bàn phím ký hiệu toán học nhanh
+    document.querySelectorAll('.math-key-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const latex = btn.getAttribute('data-latex');
+            if (!scratchpadTextInput || !latex) return;
+            const start = scratchpadTextInput.selectionStart || scratchpadTextInput.value.length;
+            const end = scratchpadTextInput.selectionEnd || scratchpadTextInput.value.length;
+            const val = scratchpadTextInput.value;
+            scratchpadTextInput.value = val.substring(0, start) + latex + val.substring(end);
+            scratchpadTextInput.focus();
+            scratchpadTextInput.selectionStart = scratchpadTextInput.selectionEnd = start + latex.length;
+        });
+    });
+
+    // Tải ảnh giấy nháp bài làm
+    if (scratchpadFileInput) {
+        scratchpadFileInput.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (ev) => {
+                scratchpadUploadedImageBase64 = ev.target.result;
+                if (scratchpadImgName) {
+                    scratchpadImgName.innerHTML = `✓ ${escapeHtml(file.name)} (${Math.round(file.size / 1024)} KB)`;
+                }
+                showToast(`Đã nhận ảnh giấy nháp: ${file.name}`, 'info');
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Chấm nháp làm lại tại chỗ
+    if (btnVerifyScratchpad) {
+        btnVerifyScratchpad.addEventListener('click', async () => {
+            const textVal = scratchpadTextInput ? scratchpadTextInput.value.trim() : '';
+            if (!textVal && !scratchpadUploadedImageBase64) {
+                showToast('⚠️ Vui lòng gõ lời giải làm lại hoặc tải ảnh giấy nháp trước nhé!', 'warning');
+                if (scratchpadTextInput) scratchpadTextInput.focus();
+                return;
+            }
+
+            const problem = socraticProblemInput ? socraticProblemInput.value.trim() : '';
+            btnVerifyScratchpad.disabled = true;
+            btnVerifyScratchpad.innerHTML = '⏳ Đang chấm nháp...';
+
+            if (scratchpadEvalResult) {
+                scratchpadEvalResult.className = 'scratchpad-result-box progress';
+                scratchpadEvalResult.innerHTML = '<strong>⏳ Gia sư AI đang phân tích phép biến đổi làm lại của em...</strong>';
+                scratchpadEvalResult.classList.remove('hidden');
+            }
+
+            try {
+                const resp = await fetch('/api/tutor/verify-scratchpad', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        problem,
+                        context: socraticActiveContext,
+                        scratchpadText: textVal,
+                        scratchpadImage: scratchpadUploadedImageBase64,
+                    })
+                });
+
+                const evalData = await resp.json();
+                btnVerifyScratchpad.disabled = false;
+                btnVerifyScratchpad.innerHTML = '🎯 Chấm lời giải làm lại';
+
+                if (evalData.success) {
+                    const statusClass = evalData.isCorrect ? 'correct' : (evalData.isProgress ? 'progress' : 'incorrect');
+                    scratchpadEvalResult.className = `scratchpad-result-box ${statusClass}`;
+                    scratchpadEvalResult.innerHTML = `
+                        <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px;">
+                            ${escapeHtml(evalData.evaluationTitle)}
+                        </div>
+                        <div style="margin-top: 4px;">${formatMathText(evalData.feedback)}</div>
+                        ${evalData.nextAdvice ? `<div style="margin-top: 6px; font-weight: 600;">👉 ${formatMathText(evalData.nextAdvice)}</div>` : ''}
+                    `;
+                    scratchpadEvalResult.classList.remove('hidden');
+
+                    // Đồng thời gửi vào luồng đàm thoại để học sinh tiện theo dõi
+                    const chatLogEntry = `**[KẾT QUẢ THỬ SỨC LÀM LẠI]**\n${evalData.evaluationTitle}\n\n${evalData.feedback}\n\n👉 *${evalData.nextAdvice || ''}*`;
+                    appendSocraticBubble('model', chatLogEntry, evalData.isCorrect ? 'hint1' : 'hint2');
+                    socraticMessageLog.push({ role: 'model', text: chatLogEntry });
+
+                    if (evalData.isCorrect) {
+                        recordGrowthActivity('correct', 'Tự sửa đúng bài làm trên bảng nháp', problem || 'Phép biến đổi toán học', 40);
+                        showToast('🎉 Chúc mừng em! Phép biến đổi làm lại hoàn toàn chính xác! (+40 XP)', 'success');
+                    } else if (evalData.isProgress) {
+                        recordGrowthActivity('attempt', 'Thử sức làm lại và có tiến bộ', problem || 'Phép biến đổi toán học', 20);
+                        showToast('💡 Rất khen ngợi em đã thử sức! Hãy xem gợi ý để hoàn thiện tiếp nhé. (+20 XP)', 'info');
+                    } else {
+                        recordGrowthActivity('attempt', 'Thử sức làm lại trên bảng nháp', problem || 'Phép biến đổi toán học', 10);
+                        showToast('💡 Rất khen ngợi em đã thử sức! Hãy xem gợi ý để hoàn thiện tiếp nhé. (+10 XP)', 'info');
+                    }
+
+                    // Render KaTeX for result
+                    if (window.renderMathInElement) {
+                        window.renderMathInElement(scratchpadEvalResult, {
+                            delimiters: [
+                                {left: '$$', right: '$$', display: true},
+                                {left: '\\[', right: '\\]', display: true},
+                                {left: '$', right: '$', display: false},
+                                {left: '\\(', right: '\\)', display: false}
+                            ],
+                            throwOnError: false
+                        });
+                    }
+                } else {
+                    scratchpadEvalResult.innerHTML = `⚠️ ${escapeHtml(evalData.message || 'Chưa thể đánh giá lúc này.')}`;
+                }
+            } catch (err) {
+                btnVerifyScratchpad.disabled = false;
+                btnVerifyScratchpad.innerHTML = '🎯 Chấm lời giải làm lại';
+                if (scratchpadEvalResult) {
+                    scratchpadEvalResult.innerHTML = '⚠️ Lỗi kết nối mạng khi chấm nháp. Em vui lòng bấm thử lại nhé!';
+                }
+            }
+        });
+    }
+
+    // Event listeners
+    if (btnOpenSocraticTutor) btnOpenSocraticTutor.addEventListener('click', () => openSocraticTutor());
+    if (cardFeatureTutor) cardFeatureTutor.addEventListener('click', () => openSocraticTutor());
+    if (btnCloseSocraticModal) btnCloseSocraticModal.addEventListener('click', closeSocraticTutor);
+
+    if (btnSocraticHint1) btnSocraticHint1.addEventListener('click', () => requestSocraticHint('hint1'));
+    if (btnSocraticHint2) btnSocraticHint2.addEventListener('click', () => requestSocraticHint('hint2'));
+    if (btnSocraticHint3) btnSocraticHint3.addEventListener('click', () => requestSocraticHint('hint3'));
+
+    if (btnSocraticSend) btnSocraticSend.addEventListener('click', () => sendSocraticChatMessage());
+    if (socraticUserMsgInput) {
+        socraticUserMsgInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendSocraticChatMessage();
+            }
+        });
+    }
+
+    if (btnClearSocraticChat) {
+        btnClearSocraticChat.addEventListener('click', () => {
+            socraticMessageLog = [];
+            if (socraticChatHistory) {
+                socraticChatHistory.innerHTML = `
+                    <div class="socratic-welcome-card" id="socratic-welcome-card">
+                        <div style="font-size: 32px; margin-bottom: 8px;">👋🤖</div>
+                        <h4 style="font-size: 15px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">Chào em! Thầy/Cô Matsuda AI đã sẵn sàng đồng hành cùng em.</h4>
+                        <p style="font-size: 13px; color: #475569; max-width: 540px; margin: 0 auto 12px; line-height: 1.5;">
+                            Thầy/Cô sẽ <strong>không giải hộ</strong> để em chép, mà sẽ gợi mở từng nấc giúp em tự hiểu bản chất và làm chủ phương pháp giải. Hãy bấm 1 trong 3 nút gợi ý phía trên hoặc đặt câu hỏi phía dưới nhé!
+                        </p>
+                        <div class="socratic-quick-chips">
+                            <button type="button" class="socratic-chip" data-query="Thầy/Cô cho em hỏi bài này em nên bắt đầu biến đổi từ đâu ạ?">❓ Em nên bắt đầu từ đâu?</button>
+                            <button type="button" class="socratic-chip" data-query="Nhắc lại giúp em quy tắc dấu khi nâng lũy thừa của số âm với ạ!">📖 Quy tắc dấu lũy thừa?</button>
+                            <button type="button" class="socratic-chip" data-query="Làm sao để nhận biết cơ số nào cần phân tích ra thừa số nguyên tố ạ?">🔍 Phân tích thừa số nguyên tố?</button>
+                        </div>
+                    </div>
+                `;
+                bindSocraticChips();
+            }
+            showToast('Đã làm mới khung trao đổi với Gia sư AI!', 'info');
+        });
+    }
+
+    function bindSocraticChips() {
+        document.querySelectorAll('.socratic-chip').forEach(chip => {
+            chip.addEventListener('click', () => {
+                const query = chip.getAttribute('data-query');
+                if (query) sendSocraticChatMessage(query);
+            });
+        });
+    }
+    bindSocraticChips();
+
+    // ========================================================
+    // MỤC 3: TÁCH BIỆT 2 CHẾ ĐỘ: HỌC SINH VS TRỢ LÝ GIÁO VIÊN
+    // ========================================================
+    let currentTutorMode = 'student'; // 'student' | 'teacher'
+    const tabModeStudent = document.getElementById('tab-mode-student');
+    const tabModeTeacher = document.getElementById('tab-mode-teacher');
+    const socraticStudentControls = document.getElementById('socratic-student-controls');
+    const socraticTeacherControls = document.getElementById('socratic-teacher-controls');
+    const tutorModalHeading = document.getElementById('tutor-modal-heading');
+    const tutorModalSubheading = document.getElementById('tutor-modal-subheading');
+    const socraticProblemLabel = document.getElementById('socratic-problem-label');
+
+    const btnTeacherGenExercises = document.getElementById('btn-teacher-gen-exercises');
+    const btnTeacherParentMsg = document.getElementById('btn-teacher-parent-msg');
+    const btnTeacherPedagogy = document.getElementById('btn-teacher-pedagogy');
+
+    function switchTutorMode(mode) {
+        currentTutorMode = mode;
+        if (tabModeStudent) tabModeStudent.classList.toggle('active', mode === 'student');
+        if (tabModeTeacher) tabModeTeacher.classList.toggle('active', mode === 'teacher');
+
+        const scratchCard = document.getElementById('socratic-scratchpad-card');
+
+        if (mode === 'teacher') {
+            if (socraticStudentControls) socraticStudentControls.classList.add('hidden');
+            if (scratchCard) scratchCard.classList.add('hidden');
+            if (socraticTeacherControls) socraticTeacherControls.classList.remove('hidden');
+
+            if (tutorModalHeading) tutorModalHeading.innerText = '👨‍🏫 Trợ Lý Giáo Viên AI';
+            if (tutorModalSubheading) tutorModalSubheading.innerText = 'Soạn 3 bài tương tự • Tin nhắn Zalo phụ huynh • Phân tích sư phạm';
+            if (socraticProblemLabel) socraticProblemLabel.innerText = '📝 Đề bài toán đang phân tích & soạn bài:';
+            if (socraticUserMsgInput) socraticUserMsgInput.placeholder = 'Nhập yêu cầu trợ giảng (VD: Soạn thêm 2 bài hình học tương tự, soạn lời nhắc nộp bài)...';
+
+            // Show teacher welcome card if chat empty
+            const welcomeCard = document.getElementById('socratic-welcome-card');
+            if (welcomeCard && socraticMessageLog.length === 0) {
+                welcomeCard.innerHTML = `
+                    <div style="font-size: 32px; margin-bottom: 8px;">👨‍🏫📋</div>
+                    <h4 style="font-size: 15px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">Kính chào Thầy/Cô! Trợ lý Giáo viên Matsuda AI đã sẵn sàng.</h4>
+                    <p style="font-size: 13px; color: #475569; max-width: 560px; margin: 0 auto 12px; line-height: 1.5;">
+                        Hệ thống giúp Thầy/Cô <strong>tiết kiệm tối đa thời gian soạn đề và báo cáo phụ huynh</strong>. Hãy bấm 1 trong 3 công cụ phía trên hoặc gõ yêu cầu cụ thể phía dưới!
+                    </p>
+                    <div class="socratic-quick-chips">
+                        <button type="button" class="socratic-chip" data-query="Soạn giúp tôi 3 bài tập cùng dạng này với thang điểm 10 chi tiết">📚 Soạn 3 bài tập tương tự</button>
+                        <button type="button" class="socratic-chip" data-query="Viết tin nhắn Zalo gửi phụ huynh thông báo kết quả và dặn dò ôn bài">💬 Soạn tin nhắn Zalo phụ huynh</button>
+                        <button type="button" class="socratic-chip" data-query="Phân tích lỗi sai điển hình của học sinh và gợi ý hoạt động 5 phút đầu giờ">📊 Phân tích lỗi & Tiết sau</button>
+                    </div>
+                `;
+                bindSocraticChips();
+            }
+        } else {
+            // mode === 'student'
+            if (socraticStudentControls) socraticStudentControls.classList.remove('hidden');
+            if (scratchCard) scratchCard.classList.remove('hidden');
+            if (socraticTeacherControls) socraticTeacherControls.classList.add('hidden');
+
+            if (tutorModalHeading) tutorModalHeading.innerText = '🤖 Gia Sư Socratic AI';
+            if (tutorModalSubheading) tutorModalSubheading.innerText = 'Dẫn dắt tư duy từng nấc • Gợi mở công thức • Tuyệt đối không giải hộ';
+            if (socraticProblemLabel) socraticProblemLabel.innerText = '📝 Đề bài toán đang cần Gia sư hỗ trợ:';
+            if (socraticUserMsgInput) socraticUserMsgInput.placeholder = 'Nhập thắc mắc hoặc câu trả lời thử sức của em (VD: Em nghĩ cơ số -4 mũ lẻ mang dấu âm đúng không ạ?)...';
+
+            const welcomeCard = document.getElementById('socratic-welcome-card');
+            if (welcomeCard && socraticMessageLog.length === 0) {
+                welcomeCard.innerHTML = `
+                    <div style="font-size: 32px; margin-bottom: 8px;">👋🤖</div>
+                    <h4 style="font-size: 15px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">Chào em! Thầy/Cô Matsuda AI đã sẵn sàng đồng hành cùng em.</h4>
+                    <p style="font-size: 13px; color: #475569; max-width: 540px; margin: 0 auto 12px; line-height: 1.5;">
+                        Thầy/Cô sẽ <strong>không giải hộ</strong> để em chép, mà sẽ gợi mở từng nấc giúp em tự hiểu bản chất và làm chủ phương pháp giải. Hãy bấm 1 trong 3 nút gợi ý phía trên hoặc đặt câu hỏi phía dưới nhé!
+                    </p>
+                    <div class="socratic-quick-chips">
+                        <button type="button" class="socratic-chip" data-query="Thầy/Cô cho em hỏi bài này em nên bắt đầu biến đổi từ đâu ạ?">❓ Em nên bắt đầu từ đâu?</button>
+                        <button type="button" class="socratic-chip" data-query="Nhắc lại giúp em quy tắc dấu khi nâng lũy thừa của số âm với ạ!">📖 Quy tắc dấu lũy thừa?</button>
+                        <button type="button" class="socratic-chip" data-query="Làm sao để nhận biết cơ số nào cần phân tích ra thừa số nguyên tố ạ?">🔍 Phân tích thừa số nguyên tố?</button>
+                    </div>
+                `;
+                bindSocraticChips();
+            }
+        }
+    }
+
+    if (tabModeStudent) tabModeStudent.addEventListener('click', () => switchTutorMode('student'));
+    if (tabModeTeacher) tabModeTeacher.addEventListener('click', () => switchTutorMode('teacher'));
+
+    async function requestTeacherAssist(action) {
+        const problem = socraticProblemInput ? socraticProblemInput.value.trim() : '';
+        if (!problem && !socraticActiveContext) {
+            showToast('⚠️ Vui lòng nhập đề bài hoặc mở bài vừa chấm trước nhé!', 'warning');
+            if (socraticProblemInput) socraticProblemInput.focus();
+            return;
+        }
+
+        const actionTitles = {
+            'generate_exercises': '📚 Yêu cầu: Soạn 3 bài tập tương tự phân hóa',
+            'parent_message': '💬 Yêu cầu: Viết tin nhắn nhận xét gửi Phụ huynh',
+            'pedagogical_analysis': '📊 Yêu cầu: Phân tích lỗi sai điển hình & Tiết học sau'
+        };
+
+        const actionTitle = actionTitles[action] || 'Yêu cầu Trợ lý Giáo viên';
+        appendSocraticBubble('user', actionTitle);
+        socraticMessageLog.push({ role: 'user', text: actionTitle });
+
+        showSocraticTyping('👨‍🏫 Trợ lý Giáo viên AI đang soạn thảo chuẩn mực...');
+
+        let teacherName = 'Thầy/Cô Toán Matsuda';
+        let schoolName = '';
+        try {
+            const rawB = localStorage.getItem('matsuda_branding_info');
+            if (rawB) {
+                const b = JSON.parse(rawB);
+                if (b.teacherName) teacherName = b.teacherName;
+                if (b.schoolName) schoolName = b.schoolName;
+            }
+        } catch (e) {}
+
+        let studentName = 'Em học sinh';
+        if (currentGradingData && currentGradingData.studentName) {
+            studentName = currentGradingData.studentName;
+        }
+
+        try {
+            const resp = await fetch('/api/tutor/teacher-assist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action,
+                    problem,
+                    context: socraticActiveContext,
+                    studentName,
+                    teacherName,
+                    schoolName
+                })
+            });
+
+            const data = await resp.json();
+            removeSocraticTyping();
+
+            if (data.success && data.reply) {
+                appendSocraticBubble('model', data.reply, action === 'generate_exercises' ? 'teacher1' : (action === 'parent_message' ? 'teacher2' : 'teacher3'));
+                socraticMessageLog.push({ role: 'model', text: data.reply });
+            } else {
+                appendSocraticBubble('model', data.message || 'Hệ thống trợ giảng tạm thời chưa phản hồi, Thầy/Cô vui lòng bấm lại nhé!');
+            }
+        } catch (err) {
+            removeSocraticTyping();
+            appendSocraticBubble('model', '⚠️ Kết nối mạng bị gián đoạn. Thầy/Cô vui lòng bấm thử lại nhé!');
+        }
+    }
+
+    if (btnTeacherGenExercises) btnTeacherGenExercises.addEventListener('click', () => requestTeacherAssist('generate_exercises'));
+    if (btnTeacherParentMsg) btnTeacherParentMsg.addEventListener('click', () => requestTeacherAssist('parent_message'));
+    if (btnTeacherPedagogy) btnTeacherPedagogy.addEventListener('click', () => requestTeacherAssist('pedagogical_analysis'));
+
+    // ========================================================
+    // MỤC 4: NHẬT KÝ TỰ HỌC & ĐO LƯỜNG SỰ TIẾN BỘ (GROWTH TRACKER)
+    // ========================================================
+    const GROWTH_STORAGE_KEY = 'matsuda_learning_growth';
+
+    const BADGES_CONFIG = [
+        {
+            id: 'persistence',
+            name: 'Chiến Binh Kiên Trì',
+            icon: '🛡️',
+            desc: 'Không nản lòng, thử sức làm lại ít nhất 1 lần trên Bảng nháp',
+            check: (data) => (data.attemptCount || 0) >= 1
+        },
+        {
+            id: 'self_correction',
+            name: 'Bậc Thầy Tự Sửa Lỗi',
+            icon: '⚡',
+            desc: 'Tự sửa đúng hoàn toàn lỗi sai cũ mà không cần chép lời giải',
+            check: (data) => (data.solvedCount || 0) >= 1
+        },
+        {
+            id: 'math_conqueror',
+            name: 'Vượt Ải Toán Học',
+            icon: '🏆',
+            desc: 'Tự sửa đúng và vượt qua từ 3 bài toán / bước nháp trở lên',
+            check: (data) => (data.solvedCount || 0) >= 3
+        },
+        {
+            id: 'socratic_thinker',
+            name: 'Tư Duy Socratic',
+            icon: '💡',
+            desc: 'Khám phá từ 5 gợi ý sư phạm để tự tìm ra hướng giải',
+            check: (data) => (data.hintsViewed || 0) >= 5
+        },
+        {
+            id: 'growth_champion',
+            name: 'Học Giả Tinh Anh',
+            icon: '👑',
+            desc: 'Đạt từ 250 điểm tích lũy tiến bộ (Growth XP)',
+            check: (data) => (data.xp || 0) >= 250
+        }
+    ];
+
+    function getGrowthData() {
+        try {
+            const raw = localStorage.getItem(GROWTH_STORAGE_KEY);
+            if (raw) return JSON.parse(raw);
+        } catch (e) {}
+        return {
+            xp: 0,
+            solvedCount: 0,
+            attemptCount: 0,
+            hintsViewed: 0,
+            unlockedBadges: [],
+            badgeUnlockDates: {},
+            activityLog: []
+        };
+    }
+
+    function saveGrowthData(data) {
+        try {
+            localStorage.setItem(GROWTH_STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {}
+        updateNavbarGrowthBadge();
+    }
+
+    function updateNavbarGrowthBadge() {
+        const badgeEl = document.getElementById('growth-badge-count');
+        if (!badgeEl) return;
+        const data = getGrowthData();
+        const unlockedCount = (data.unlockedBadges || []).length;
+        badgeEl.innerText = `${unlockedCount}/5`;
+    }
+    updateNavbarGrowthBadge();
+
+    function recordGrowthActivity(type, title, detail, xpGain) {
+        const data = getGrowthData();
+        data.xp = (data.xp || 0) + xpGain;
+        if (type === 'correct') {
+            data.solvedCount = (data.solvedCount || 0) + 1;
+            data.attemptCount = (data.attemptCount || 0) + 1;
+        } else if (type === 'attempt') {
+            data.attemptCount = (data.attemptCount || 0) + 1;
+        } else if (type === 'hint') {
+            data.hintsViewed = (data.hintsViewed || 0) + 1;
+        }
+
+        if (!data.unlockedBadges) data.unlockedBadges = [];
+        if (!data.badgeUnlockDates) data.badgeUnlockDates = {};
+
+        // Check for new badges
+        let newBadgeUnlocked = false;
+        BADGES_CONFIG.forEach(b => {
+            if (!data.unlockedBadges.includes(b.id) && b.check(data)) {
+                data.unlockedBadges.push(b.id);
+                data.badgeUnlockDates[b.id] = new Date().toLocaleDateString('vi-VN');
+                showToast(`🏅 HUY HIỆU MỚI: [${b.name}]! Chúc mừng em đã tiến bộ vượt bậc! 🎉`, 'success');
+                newBadgeUnlocked = true;
+            }
+        });
+
+        if (newBadgeUnlocked || type === 'correct') {
+            triggerCelebrationConfetti();
+        }
+
+        // Add to activity log (max 30 entries)
+        if (!data.activityLog) data.activityLog = [];
+        data.activityLog.unshift({
+            id: 'act_' + Date.now(),
+            timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }),
+            type,
+            title,
+            detail: detail.length > 80 ? detail.substring(0, 80) + '...' : detail,
+            xp: xpGain
+        });
+        if (data.activityLog.length > 30) data.activityLog.pop();
+
+        saveGrowthData(data);
+        renderGrowthTrackerUI();
+    }
+
+    const growthModal = document.getElementById('growth-tracker-modal');
+    const btnOpenGrowthTracker = document.getElementById('btn-open-growth-tracker');
+    const cardFeatureGrowth = document.getElementById('card-feature-growth');
+    const btnSocraticToGrowth = document.getElementById('btn-socratic-to-growth');
+    const btnCloseGrowthModal = document.getElementById('btn-close-growth-modal');
+    const btnResetGrowthData = document.getElementById('btn-reset-growth-data');
+    const btnExportGrowthSummary = document.getElementById('btn-export-growth-summary');
+
+    function openGrowthTrackerModal() {
+        if (!growthModal) return;
+        renderGrowthTrackerUI();
+        growthModal.classList.remove('hidden');
+    }
+
+    function closeGrowthTrackerModal() {
+        if (growthModal) growthModal.classList.add('hidden');
+    }
+
+    function renderGrowthTrackerUI() {
+        const data = getGrowthData();
+
+        // Level calculation
+        const xp = data.xp || 0;
+        let rankTitle = 'Người Khám Phá';
+        let avatarIcon = '🌱';
+        let nextXP = 100;
+        let prevXP = 0;
+
+        if (xp >= 500) {
+            rankTitle = 'Học Giả Toán Học Tinh Anh';
+            avatarIcon = '👑';
+            nextXP = 500;
+            prevXP = 500;
+        } else if (xp >= 250) {
+            rankTitle = 'Bậc Thầy Tư Duy Socratic';
+            avatarIcon = '🌟';
+            nextXP = 500;
+            prevXP = 250;
+        } else if (xp >= 100) {
+            rankTitle = 'Nhà Toán Học Kiên Định';
+            avatarIcon = '🚀';
+            nextXP = 250;
+            prevXP = 100;
+        }
+
+        const rankTitleEl = document.getElementById('growth-rank-title');
+        const rankAvatarEl = document.getElementById('growth-rank-avatar');
+        const xpBarEl = document.getElementById('growth-xp-bar');
+        const xpTextEl = document.getElementById('growth-xp-text');
+
+        if (rankTitleEl) rankTitleEl.innerText = rankTitle;
+        if (rankAvatarEl) rankAvatarEl.innerText = avatarIcon;
+
+        const progressPercent = nextXP === prevXP ? 100 : Math.min(100, Math.max(0, ((xp - prevXP) / (nextXP - prevXP)) * 100));
+        if (xpBarEl) xpBarEl.style.width = `${progressPercent}%`;
+        if (xpTextEl) {
+            xpTextEl.innerText = nextXP === prevXP 
+                ? `Đạt cấp độ tối đa (${xp} XP) 👑` 
+                : `${xp} / ${nextXP} XP (${nextXP - xp} XP nữa để lên cấp)`;
+        }
+
+        // Stats
+        const elSolved = document.getElementById('growth-stat-solved');
+        const elHints = document.getElementById('growth-stat-hints');
+        const elRate = document.getElementById('growth-stat-rate');
+        const elBadges = document.getElementById('growth-stat-badges');
+
+        if (elSolved) elSolved.innerText = data.solvedCount || 0;
+        if (elHints) elHints.innerText = data.hintsViewed || 0;
+
+        const attempts = data.attemptCount || 0;
+        const rate = attempts > 0 ? Math.round(((data.solvedCount || 0) / attempts) * 100) : 0;
+        if (elRate) elRate.innerText = `${rate}%`;
+
+        const unlockedBadges = data.unlockedBadges || [];
+        if (elBadges) elBadges.innerText = `${unlockedBadges.length}/${BADGES_CONFIG.length}`;
+
+        // Render Badges
+        const badgesContainer = document.getElementById('growth-badges-container');
+        if (badgesContainer) {
+            let bHtml = '';
+            BADGES_CONFIG.forEach(b => {
+                const isUnlocked = unlockedBadges.includes(b.id);
+                const unlockDate = (data.badgeUnlockDates || {})[b.id];
+                bHtml += `
+                    <div class="growth-badge-card ${isUnlocked ? 'unlocked' : 'locked'}">
+                        <div class="badge-card-icon">${isUnlocked ? b.icon : '🔒'}</div>
+                        <div class="badge-card-info">
+                            <div class="badge-card-name">${escapeHtml(b.name)}</div>
+                            <div class="badge-card-desc">${escapeHtml(b.desc)}</div>
+                            <span class="badge-card-status ${isUnlocked ? 'achieved' : 'pending'}">
+                                ${isUnlocked ? `✓ Đã đạt ${unlockDate ? `(${unlockDate})` : ''}` : 'Chưa đạt'}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            });
+            badgesContainer.innerHTML = bHtml;
+        }
+
+        // Render Activity Log
+        const logContainer = document.getElementById('growth-log-container');
+        if (logContainer) {
+            const logs = data.activityLog || [];
+            if (logs.length === 0) {
+                logContainer.innerHTML = `
+                    <div style="text-align: center; color: #94a3b8; padding: 20px 0; font-size: 13px;">
+                        🌱 Chưa có hoạt động nào. Hãy thử giải bài nháp hoặc bấm Gợi ý Socratic để bắt đầu tích lũy XP nhé!
+                    </div>
+                `;
+            } else {
+                let lHtml = '';
+                logs.forEach(l => {
+                    const tagClass = l.type === 'correct' ? 'correct' : 'hint';
+                    const tagLabel = l.type === 'correct' ? '✓ Tự sửa đúng' : (l.type === 'attempt' ? '✏️ Thử sức' : '💡 Xem gợi ý');
+                    lHtml += `
+                        <div class="growth-log-item">
+                            <div class="growth-log-left">
+                                <span class="growth-log-tag ${tagClass}">${tagLabel}</span>
+                                <div>
+                                    <strong style="color: #1e293b;">${escapeHtml(l.title)}</strong>
+                                    <div style="color: #64748b; font-size: 11px;">${escapeHtml(l.detail)} • <span style="color: #94a3b8;">${escapeHtml(l.timestamp)}</span></div>
+                                </div>
+                            </div>
+                            <div class="growth-log-xp">+${l.xp} XP</div>
+                        </div>
+                    `;
+                });
+                logContainer.innerHTML = lHtml;
+            }
+        }
+    }
+
+    if (btnOpenGrowthTracker) btnOpenGrowthTracker.addEventListener('click', openGrowthTrackerModal);
+    if (cardFeatureGrowth) cardFeatureGrowth.addEventListener('click', openGrowthTrackerModal);
+    if (btnSocraticToGrowth) btnSocraticToGrowth.addEventListener('click', () => {
+        closeSocraticTutor();
+        openGrowthTrackerModal();
+    });
+    if (btnCloseGrowthModal) btnCloseGrowthModal.addEventListener('click', closeGrowthTrackerModal);
+
+    if (btnResetGrowthData) {
+        btnResetGrowthData.addEventListener('click', () => {
+            if (confirm('Em có chắc chắn muốn làm mới lại dữ liệu Nhật ký tự học và Huy hiệu không?')) {
+                localStorage.removeItem(GROWTH_STORAGE_KEY);
+                renderGrowthTrackerUI();
+                updateNavbarGrowthBadge();
+                showToast('Đã làm mới dữ liệu Nhật ký tự học!', 'info');
+            }
+        });
+    }
+
+    if (btnExportGrowthSummary) {
+        btnExportGrowthSummary.addEventListener('click', () => {
+            const data = getGrowthData();
+            const unlocked = (data.unlockedBadges || []).length;
+            const text = `📊 BÁO CÁO TIẾN BỘ TỰ HỌC - TOÁN MATSUDA AI
+• Điểm tích lũy tiến bộ: ${data.xp || 0} XP
+• Cấp độ đạt được: ${(data.xp || 0) >= 500 ? 'Học Giả Tinh Anh 👑' : (data.xp || 0) >= 250 ? 'Bậc Thầy Tư Duy Socratic 🌟' : (data.xp || 0) >= 100 ? 'Nhà Toán Học Kiên Định 🚀' : 'Người Khám Phá 🌱'}
+• Số lỗi sai đã tự sửa: ${data.solvedCount || 0} bài
+• Số gợi ý sư phạm đã khám phá: ${data.hintsViewed || 0} lần
+• Huy hiệu đạt được: ${unlocked}/5 (${(data.unlockedBadges || []).map(id => BADGES_CONFIG.find(b=>b.id===id)?.name).filter(Boolean).join(', ') || 'Đang chinh phục'})
+(Tạo tự động từ nền tảng Toán Matsuda AI)`;
+
+            navigator.clipboard.writeText(text).then(() => {
+                showToast('📋 Đã sao chép báo cáo tiến bộ vào bộ nhớ tạm!', 'success');
+            }).catch(() => {
+                showToast('Không thể sao chép tự động.', 'error');
+            });
+        });
+    }
+
+    // ========================================================
+    // TỐI ƯU TRẢI NGHIỆM: HIỆU ỨNG CHÚC MỪNG & ĐÓNG MODAL TIỆN LỢI
+    // ========================================================
+    function triggerCelebrationConfetti() {
+        const colors = ['#22c55e', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#10b981'];
+        const container = document.createElement('div');
+        container.style.position = 'fixed';
+        container.style.inset = '0';
+        container.style.pointerEvents = 'none';
+        container.style.zIndex = '999999';
+        container.style.overflow = 'hidden';
+        document.body.appendChild(container);
+
+        for (let i = 0; i < 36; i++) {
+            const piece = document.createElement('div');
+            const size = Math.random() * 8 + 6;
+            piece.style.position = 'absolute';
+            piece.style.width = `${size}px`;
+            piece.style.height = `${size * 0.6}px`;
+            piece.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.borderRadius = '2px';
+            piece.style.left = `${Math.random() * 100}%`;
+            piece.style.top = '-10px';
+            piece.style.opacity = '1';
+
+            const duration = Math.random() * 1.4 + 1.2;
+            const delay = Math.random() * 0.3;
+            const xOffset = (Math.random() - 0.5) * 180;
+
+            piece.animate([
+                { transform: `translate(0, 0) rotate(0deg)`, opacity: 1 },
+                { transform: `translate(${xOffset}px, ${window.innerHeight + 20}px) rotate(${Math.random() * 720}deg)`, opacity: 0 }
+            ], {
+                duration: duration * 1000,
+                delay: delay * 1000,
+                easing: 'cubic-bezier(0.25, 1, 0.5, 1)'
+            });
+
+            container.appendChild(piece);
+        }
+
+        setTimeout(() => {
+            container.remove();
+        }, 2600);
+    }
+
+    // Đóng Modal khi bấm phím Escape (ESC)
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            if (socraticModal && !socraticModal.classList.contains('hidden')) {
+                closeSocraticTutor();
+            } else if (growthModal && !growthModal.classList.contains('hidden')) {
+                closeGrowthTrackerModal();
+            }
+        }
+    });
+
+    // Đóng Modal khi bấm ra ngoài nền mờ (Backdrop click)
+    if (socraticModal) {
+        socraticModal.addEventListener('click', (e) => {
+            if (e.target === socraticModal) closeSocraticTutor();
+        });
+    }
+    if (growthModal) {
+        growthModal.addEventListener('click', (e) => {
+            if (e.target === growthModal) closeGrowthTrackerModal();
+        });
+    }
 });
 

@@ -46,7 +46,13 @@
             </div>
             <nav class="navbar">
                 <a href="#" class="nav-link active">Trang chủ</a>
-                <button type="button" id="btn-pwa-install" class="nav-btn-history" style="background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; font-weight: 700;" title="Cài đặt ứng dụng vào điện thoại hoặc máy tính để mở toàn màn hình như App">
+                <button type="button" id="btn-open-socratic-tutor" class="nav-btn-history" style="background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; font-weight: 700;" title="Mở Gia sư Socratic AI - Dẫn dắt tư duy, gợi ý từng bước, không giải hộ">
+                    🤖 Gia sư Socratic AI
+                </button>
+                <button type="button" id="btn-open-growth-tracker" class="nav-btn-history" style="background: #f0fdf4; color: #166534; border-color: #86efac; font-weight: 700;" title="Nhật ký tự học & Đo lường sự tiến bộ, Hệ thống huy hiệu vinh danh">
+                    📊 Nhật ký tiến bộ <span id="growth-badge-count" class="history-badge" style="background: #16a34a;">0</span>
+                </button>
+                <button type="button" id="btn-pwa-install" class="nav-btn-history" style="background: #f8fafc; color: #334155; border-color: #cbd5e1; font-weight: 600;" title="Cài đặt ứng dụng vào điện thoại hoặc máy tính để mở toàn màn hình như App">
                     📲 Cài đặt App
                 </button>
                 <button type="button" id="btn-open-branding" class="nav-btn-history" title="Cài đặt tên trường và giáo viên hiển thị trên phiếu chấm">
@@ -86,13 +92,15 @@
                     <div class="feature-icon">📚</div>
                     <h3>Kho đề thông minh</h3>
                 </div>
-                <div class="feature-card glass-card">
+                <div class="feature-card glass-card" id="card-feature-growth" style="cursor: pointer;" title="Nhấn để xem Nhật ký tự học & Huy hiệu tiến bộ">
                     <div class="feature-icon">📊</div>
-                    <h3>Phân tích kết quả học tập</h3>
+                    <h3>Nhật ký tiến bộ & Huy hiệu</h3>
+                    <span style="font-size: 11px; color: #16a34a; font-weight: 700;">Hành trình tư duy</span>
                 </div>
-                <div class="feature-card glass-card">
+                <div class="feature-card glass-card" id="card-feature-tutor" style="cursor: pointer;" title="Nhấn để mở Gia sư Socratic AI (Dẫn dắt tư duy, không giải hộ)">
                     <div class="feature-icon">🤖</div>
-                    <h3>Gia sư AI</h3>
+                    <h3>Gia sư Socratic AI</h3>
+                    <span style="font-size: 11px; color: #2563eb; font-weight: 700;">Gợi mở tư duy 1-chạm</span>
                 </div>
             </div>
         </section>
@@ -1059,6 +1067,281 @@
                         📋 Sao chép tin nhắn Zalo
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GIA SƯ SOCRATIC AI (MỤC 1: DẪN DẮT TƯ DUY, KHÔNG GIẢI HỘ) -->
+    <div id="socratic-tutor-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up socratic-tutor-box">
+            <!-- Modal Header -->
+            <div class="socratic-modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <img src="assets/icons/app-logo.png" alt="Toán Matsuda AI" class="socratic-modal-icon">
+                    <div>
+                        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #2563eb; font-weight: 800;">TOÁN MATSUDA AI • HỆ THỐNG GIA SƯ KÉP</div>
+                        <h3 class="gradient-text" style="font-size: 18px; margin: 0; font-weight: 800;" id="tutor-modal-heading">🤖 Gia Sư Socratic AI</h3>
+                        <div style="font-size: 12px; color: var(--text-secondary);" id="tutor-modal-subheading">Dẫn dắt tư duy từng nấc • Gợi mở công thức • Tuyệt đối không giải hộ</div>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <button type="button" id="btn-socratic-to-growth" class="btn btn-outline btn-sm" style="font-size: 12px; padding: 5px 10px; display: inline-flex; align-items: center; gap: 4px; border-color: #86efac; color: #166534;" title="Mở Nhật ký tiến bộ & Danh hiệu huy hiệu">
+                        📊 Xem Tiến bộ
+                    </button>
+                    <button type="button" id="btn-close-socratic-modal" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 14px;">✕ Đóng</button>
+                </div>
+            </div>
+
+            <!-- Mode Switcher (Mục 3: Tách biệt Chế độ Học sinh vs Giáo viên) -->
+            <div class="tutor-mode-switcher-bar">
+                <button type="button" id="tab-mode-student" class="tutor-mode-tab active" title="Dành cho học sinh tự học, gợi ý Socratic từng nấc, không giải hộ">
+                    🎓 Chế độ Học sinh (Tự học & Gợi ý)
+                </button>
+                <button type="button" id="tab-mode-teacher" class="tutor-mode-tab" title="Dành cho Thầy/Cô: Soạn bài tương tự, viết nhận xét Zalo phụ huynh, phân tích sư phạm">
+                    👨‍🏫 Trợ lý Giáo viên (Soạn đề, Nhận xét PH, Phân tích lỗi)
+                </button>
+            </div>
+
+            <!-- Problem Context Area -->
+            <div class="socratic-problem-bar">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 6px;">
+                    <label for="socratic-problem-input" style="font-size: 12.5px; font-weight: 700; color: #1e293b;" id="socratic-problem-label">
+                        📝 Đề bài toán đang cần hỗ trợ:
+                    </label>
+                    <span id="socratic-context-badge" class="socratic-badge-pill hidden">🎯 Đã nạp ngữ cảnh từ bài chấm</span>
+                </div>
+                <div class="socratic-input-wrapper">
+                    <textarea id="socratic-problem-input" class="form-input socratic-textarea" rows="2" placeholder="Nhập đề bài toán (hoặc bấm nút 'Hỏi Gia sư' tại bài vừa chấm để tự động nạp)..."></textarea>
+                </div>
+                <div id="socratic-context-preview" class="socratic-context-preview-box hidden">
+                    <!-- Ngữ cảnh lỗi sai nạp tự động -->
+                </div>
+            </div>
+
+            <!-- 3 Cấp độ Gợi ý 1-Chạm (DÀNH CHO HỌC SINH) -->
+            <div class="socratic-hints-toolbar" id="socratic-student-controls">
+                <div style="font-size: 12px; font-weight: 700; color: #475569; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                    <span>⚡ 3 Cấp độ gợi ý sư phạm (Bấm để nhận gợi mở từng nấc):</span>
+                    <span style="font-size: 11px; color: #64748b; font-style: italic;">*Không giải hộ - Giúp em tự làm chủ bài toán</span>
+                </div>
+                <div class="socratic-hint-buttons-grid">
+                    <button type="button" id="btn-socratic-hint-1" class="btn-socratic-hint hint-1" title="Nhắc lại công thức, định lý, quy tắc toán học cần dùng">
+                        <span class="hint-icon">💡</span>
+                        <div class="hint-text-group">
+                            <span class="hint-title">Gợi ý 1: Nhẹ</span>
+                            <span class="hint-desc">Công thức & Định lý cần dùng</span>
+                        </div>
+                    </button>
+                    <button type="button" id="btn-socratic-hint-2" class="btn-socratic-hint hint-2" title="Chỉ ra hướng đi và bước biến đổi đầu tiên">
+                        <span class="hint-icon">🔍</span>
+                        <div class="hint-text-group">
+                            <span class="hint-title">Gợi ý 2: Vừa</span>
+                            <span class="hint-desc">Hướng đi & Nút thắt tư duy</span>
+                        </div>
+                    </button>
+                    <button type="button" id="btn-socratic-hint-3" class="btn-socratic-hint hint-3" title="Dành cho khi thực sự bế tắc: Hướng dẫn chi tiết từng bước">
+                        <span class="hint-icon">📘</span>
+                        <div class="hint-text-group">
+                            <span class="hint-title">Gợi ý 3: Sâu</span>
+                            <span class="hint-desc">Dẫn dắt chi tiết từng bước</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3 CÔNG CỤ TRỢ LÝ GIÁO VIÊN (DÀNH CHO THẦY CÔ - MỤC 3) -->
+            <div class="socratic-hints-toolbar hidden" id="socratic-teacher-controls">
+                <div style="font-size: 12px; font-weight: 700; color: #1e3a8a; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;">
+                    <span>👨‍🏫 Bộ 3 Công cụ Trợ giảng AI (Bấm 1-chạm để sinh tự động):</span>
+                    <span style="font-size: 11px; color: #16a34a; font-weight: 700;">✓ Chuẩn GDPT 2018</span>
+                </div>
+                <div class="socratic-hint-buttons-grid">
+                    <button type="button" id="btn-teacher-gen-exercises" class="btn-socratic-hint teacher-tool-1" title="Soạn thêm 3 bài tập cùng dạng phân hóa Dễ - Vừa - Nâng cao kèm đáp án">
+                        <span class="hint-icon">📚</span>
+                        <div class="hint-text-group">
+                            <span class="hint-title">Soạn 3 bài tập tương tự</span>
+                            <span class="hint-desc">Dễ • Vừa • Nâng cao</span>
+                        </div>
+                    </button>
+                    <button type="button" id="btn-teacher-parent-msg" class="btn-socratic-hint teacher-tool-2" title="Viết tin nhắn Zalo gửi phụ huynh tóm tắt ưu/nhược điểm và dặn dò ôn tập">
+                        <span class="hint-icon">💬</span>
+                        <div class="hint-text-group">
+                            <span class="hint-title">Nhận xét gửi Phụ huynh</span>
+                            <span class="hint-desc">Tin nhắn Zalo mẫu chuẩn mực</span>
+                        </div>
+                    </button>
+                    <button type="button" id="btn-teacher-pedagogy" class="btn-socratic-hint teacher-tool-3" title="Phân tích nguyên nhân gốc rễ và đề xuất mini-game 5 phút đầu giờ">
+                        <span class="hint-icon">📊</span>
+                        <div class="hint-text-group">
+                            <span class="hint-title">Phân tích lỗi & Tiết sau</span>
+                            <span class="hint-desc">Lỗ hổng & Mini-game 5p</span>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- INTERACTIVE SCRATCHPAD (MỤC 2: THỬ SỨC LÀM LẠI TẠI CHỖ & CHẤM NHÁP) -->
+            <div class="socratic-scratchpad-card" id="socratic-scratchpad-card">
+                <div class="scratchpad-header" id="scratchpad-toggle-header">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 16px;">✏️</span>
+                        <strong style="font-size: 13px; color: #1e3a8a;">Thử sức làm lại tại chỗ (Interactive Scratchpad)</strong>
+                        <span class="scratchpad-pill">Chấm nháp tức thì</span>
+                    </div>
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-toggle-scratchpad" style="font-size: 11.5px; padding: 2px 8px;">
+                        Mở rộng bảng nháp ▾
+                    </button>
+                </div>
+                <div class="scratchpad-body hidden" id="scratchpad-body-content">
+                    <p style="font-size: 12px; color: #475569; margin: 0 0 6px 0;">
+                        Gõ phép biến đổi mới hoặc tải ảnh nháp để Gia sư AI kiểm tra xem em đã khắc phục được lỗi sai chưa nhé!
+                    </p>
+                    <div class="scratchpad-input-container">
+                        <textarea id="scratchpad-text-input" class="form-input" rows="2" placeholder="Nhập lời giải làm lại của em (VD: (-4)^9 = -(4^9) = -(2^2)^9 = -2^18)..."></textarea>
+                    </div>
+                    
+                    <!-- Bàn phím ký hiệu toán học nhanh -->
+                    <div class="math-quick-keys-row">
+                        <span style="font-size: 11px; font-weight: 700; color: #64748b;">Ký hiệu:</span>
+                        <button type="button" class="math-key-btn" data-latex="\frac{a}{b}">\frac{a}{b}</button>
+                        <button type="button" class="math-key-btn" data-latex="x^{n}">x^{n}</button>
+                        <button type="button" class="math-key-btn" data-latex="\sqrt{x}">\sqrt{x}</button>
+                        <button type="button" class="math-key-btn" data-latex="\cdot">\cdot</button>
+                        <button type="button" class="math-key-btn" data-latex="(-a)^{n}">(-a)^{n}</button>
+                        <button type="button" class="math-key-btn" data-latex="\pm">\pm</button>
+                    </div>
+
+                    <!-- Tải ảnh trang nháp + Nút chấm nháp -->
+                    <div class="scratchpad-actions-row">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label class="btn btn-outline btn-sm" style="cursor: pointer; font-size: 11.5px; padding: 4px 10px; margin: 0; display: inline-flex; align-items: center; gap: 4px;">
+                                📷 Tải ảnh giấy nháp
+                                <input type="file" id="scratchpad-file-input" accept="image/*" style="display: none;">
+                            </label>
+                            <span id="scratchpad-img-name" style="font-size: 11px; color: #15803d; font-weight: 600;"></span>
+                        </div>
+                        <button type="button" id="btn-verify-scratchpad" class="btn btn-primary btn-sm" style="font-size: 12px; font-weight: 700; padding: 6px 14px;">
+                            🎯 Chấm lời giải làm lại
+                        </button>
+                    </div>
+
+                    <!-- Khung kết quả đánh giá bài nháp làm lại -->
+                    <div id="scratchpad-eval-result" class="scratchpad-result-box hidden">
+                        <!-- Dynamic Evaluation inject here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Khung Hội thoại Đàm thoại Socratic (Chat History) -->
+            <div class="socratic-dialogue-area" id="socratic-chat-history">
+                <div class="socratic-welcome-card" id="socratic-welcome-card">
+                    <div style="font-size: 32px; margin-bottom: 8px;">👋🤖</div>
+                    <h4 style="font-size: 15px; font-weight: 800; color: #1e3a8a; margin-bottom: 4px;">Chào em! Thầy/Cô Matsuda AI đã sẵn sàng đồng hành cùng em.</h4>
+                    <p style="font-size: 13px; color: #475569; max-width: 540px; margin: 0 auto 12px; line-height: 1.5;">
+                        Thầy/Cô sẽ <strong>không giải hộ</strong> để em chép, mà sẽ gợi mở từng nấc giúp em tự hiểu bản chất và làm chủ phương pháp giải. Hãy bấm 1 trong 3 nút gợi ý phía trên hoặc đặt câu hỏi phía dưới nhé!
+                    </p>
+                    <div class="socratic-quick-chips">
+                        <button type="button" class="socratic-chip" data-query="Thầy/Cô cho em hỏi bài này em nên bắt đầu biến đổi từ đâu ạ?">❓ Em nên bắt đầu từ đâu?</button>
+                        <button type="button" class="socratic-chip" data-query="Nhắc lại giúp em quy tắc dấu khi nâng lũy thừa của số âm với ạ!">📖 Quy tắc dấu lũy thừa?</button>
+                        <button type="button" class="socratic-chip" data-query="Làm sao để nhận biết cơ số nào cần phân tích ra thừa số nguyên tố ạ?">🔍 Phân tích thừa số nguyên tố?</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Khung Nhập Lời Nhắn / Câu Hỏi Của Học Sinh -->
+            <div class="socratic-input-dock">
+                <div class="socratic-input-group">
+                    <input type="text" id="socratic-user-msg-input" class="form-input" placeholder="Nhập thắc mắc hoặc câu trả lời thử sức của em (VD: Em nghĩ cơ số -4 mũ lẻ mang dấu âm đúng không ạ?)..." autocomplete="off">
+                    <button type="button" id="btn-socratic-send" class="btn btn-primary" style="padding: 8px 18px; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                        <span>Gửi</span> <span>➤</span>
+                    </button>
+                </div>
+                <div style="font-size: 11px; color: #64748b; margin-top: 5px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>💡 Mẹo: Nhấn Enter để gửi tin nhắn thắc mắc tới Gia sư AI.</span>
+                    <button type="button" id="btn-clear-socratic-chat" style="background: none; border: none; color: #94a3b8; cursor: pointer; text-decoration: underline; font-size: 11px;">Xóa lịch sử chat</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NHẬT KÝ TỰ HỌC & ĐO LƯỜNG SỰ TIẾN BỘ (MỤC 4: LEARNING GROWTH TRACKER) -->
+    <div id="growth-tracker-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up growth-tracker-box">
+            <!-- Modal Header -->
+            <div class="growth-modal-header">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span style="font-size: 32px;">📊</span>
+                    <div>
+                        <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #16a34a; font-weight: 800;">TOÁN MATSUDA AI • HÀNH TRÌNH TƯ DUY</div>
+                        <h3 class="gradient-text" style="font-size: 18px; margin: 0; font-weight: 800;">Nhật Ký Tự Học & Đo Lường Tiến Bộ</h3>
+                        <div style="font-size: 12px; color: var(--text-secondary);">Ghi nhận nỗ lực tự sửa lỗi • Vinh danh huy hiệu kiên trì</div>
+                    </div>
+                </div>
+                <button type="button" id="btn-close-growth-modal" class="btn btn-secondary btn-sm" style="padding: 6px 12px; font-size: 14px;">✕ Đóng</button>
+            </div>
+
+            <!-- Growth Overview Card (XP & Level) -->
+            <div class="growth-overview-card">
+                <div class="growth-level-badge">
+                    <span class="growth-avatar-icon" id="growth-rank-avatar">🌱</span>
+                    <div class="growth-rank-info">
+                        <span class="growth-rank-subtitle">CẤP ĐỘ TỰ HỌC</span>
+                        <h4 class="growth-rank-title" id="growth-rank-title">Người Khám Phá</h4>
+                        <div class="growth-xp-bar-container">
+                            <div class="growth-xp-bar-fill" id="growth-xp-bar" style="width: 0%;"></div>
+                        </div>
+                        <span class="growth-xp-text" id="growth-xp-text">0 / 100 XP để lên cấp tiếp theo</span>
+                    </div>
+                </div>
+                <div class="growth-stats-grid">
+                    <div class="growth-stat-item">
+                        <span class="growth-stat-num" id="growth-stat-solved">0</span>
+                        <span class="growth-stat-label">🎯 Lỗi đã tự sửa</span>
+                    </div>
+                    <div class="growth-stat-item">
+                        <span class="growth-stat-num" id="growth-stat-hints">0</span>
+                        <span class="growth-stat-label">💡 Gợi ý đã khám phá</span>
+                    </div>
+                    <div class="growth-stat-item">
+                        <span class="growth-stat-num" id="growth-stat-rate">0%</span>
+                        <span class="growth-stat-label">⚡ Tỉ lệ sửa đúng</span>
+                    </div>
+                    <div class="growth-stat-item">
+                        <span class="growth-stat-num" id="growth-stat-badges">0/5</span>
+                        <span class="growth-stat-label">🏅 Huy hiệu đã đạt</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Badges Section (Hệ thống Huy hiệu vinh danh) -->
+            <div class="growth-badges-section">
+                <h4 class="growth-section-title">🏅 Huy Hiệu Vinh Danh Nỗ Lực (Gamification)</h4>
+                <div class="growth-badges-grid" id="growth-badges-container">
+                    <!-- Badges will be dynamically populated -->
+                </div>
+            </div>
+
+            <!-- Activity Log Section (Nhật ký tự học & các bài đã vượt qua) -->
+            <div class="growth-log-section">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                    <h4 class="growth-section-title" style="margin: 0;">📝 Lịch Sử Vượt Ải & Tự Sửa Lỗi</h4>
+                    <button type="button" id="btn-export-growth-summary" class="btn btn-outline btn-sm" style="font-size: 11px; padding: 3px 10px;">
+                        📋 Sao chép báo cáo gửi Ba Mẹ / Thầy Cô
+                    </button>
+                </div>
+                <div class="growth-log-list" id="growth-log-container">
+                    <!-- Dynamic Log items -->
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="growth-modal-footer">
+                <span style="font-size: 11px; color: #64748b;">
+                    💡 Điểm thưởng XP và huy hiệu được tự động cập nhật mỗi khi em làm lại nháp và xem gợi ý Socratic.
+                </span>
+                <button type="button" id="btn-reset-growth-data" style="background: none; border: none; color: #94a3b8; font-size: 11px; cursor: pointer; text-decoration: underline;">
+                    Làm mới dữ liệu
+                </button>
             </div>
         </div>
     </div>

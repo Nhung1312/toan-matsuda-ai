@@ -1835,5 +1835,899 @@ kbd {
     border-color: #0369a1;
 }
 
+/* ========================================================
+   MỤC 1: GIA SƯ SOCRATIC AI - STYLES & INTERFACES
+   ======================================================== */
+.socratic-tutor-box {
+    max-width: 780px;
+    width: 95%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 24px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.18);
+    text-align: left;
+}
+
+.socratic-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+
+.socratic-modal-icon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.socratic-problem-bar {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 14px;
+}
+
+.socratic-textarea {
+    resize: vertical;
+    min-height: 52px;
+    font-size: 13.5px;
+    line-height: 1.45;
+    background: #ffffff;
+}
+
+.socratic-badge-pill {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 9999px;
+}
+
+.socratic-context-preview-box {
+    background: #fff7ed;
+    border: 1px dashed #fdba74;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    color: #9a3412;
+    margin-top: 6px;
+    line-height: 1.4;
+}
+
+.socratic-hints-toolbar {
+    margin-bottom: 14px;
+}
+
+.socratic-hint-buttons-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+}
+
+.btn-socratic-hint {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    border: 1.5px solid;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: left;
+    background: #ffffff;
+}
+
+.btn-socratic-hint .hint-icon {
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.btn-socratic-hint .hint-text-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.btn-socratic-hint .hint-title {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.btn-socratic-hint .hint-desc {
+    font-size: 11px;
+    opacity: 0.85;
+    margin-top: 2px;
+    line-height: 1.2;
+}
+
+/* 3 Cấp độ Gợi ý với màu nhận diện trực quan */
+.btn-socratic-hint.hint-1 {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    color: #92400e;
+}
+.btn-socratic-hint.hint-1:hover {
+    background: #fef3c7;
+    border-color: #f59e0b;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.btn-socratic-hint.hint-2 {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1e40af;
+}
+.btn-socratic-hint.hint-2:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-socratic-hint.hint-3 {
+    background: #f5f3ff;
+    border-color: #c4b5fd;
+    color: #5b21b6;
+}
+.btn-socratic-hint.hint-3:hover {
+    background: #ede9fe;
+    border-color: #8b5cf6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+.btn-socratic-hint:active {
+    transform: translateY(0);
+}
+
+/* Vùng đàm thoại Socratic Chat */
+.socratic-dialogue-area {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 6px;
+    margin-bottom: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 200px;
+    max-height: 340px;
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+}
+
+.socratic-dialogue-area::-webkit-scrollbar {
+    width: 5px;
+}
+.socratic-dialogue-area::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+}
+
+.socratic-welcome-card {
+    background: linear-gradient(135deg, #f0f7ff 0%, #e0eefe 100%);
+    border: 1px solid #bfdbfe;
+    border-radius: 12px;
+    padding: 18px 20px;
+    text-align: center;
+}
+
+.socratic-quick-chips {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.socratic-chip {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #1e40af;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 10px;
+    border-radius: 9999px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.socratic-chip:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    transform: translateY(-1px);
+}
+
+/* Bong bóng tin nhắn */
+.socratic-msg-row {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+.socratic-msg-row.user {
+    justify-content: flex-end;
+}
+.socratic-msg-row.model {
+    justify-content: flex-start;
+}
+
+.socratic-msg-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+}
+
+.socratic-bubble {
+    max-width: 82%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    position: relative;
+    word-break: break-word;
+}
+
+.socratic-msg-row.user .socratic-bubble {
+    background: #2563eb;
+    color: #ffffff;
+    border-bottom-right-radius: 3px;
+}
+
+.socratic-msg-row.model .socratic-bubble {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    color: #1e293b;
+    border-bottom-left-radius: 3px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+}
+
+.socratic-bubble.hint-level-1 {
+    background: #fffdf5;
+    border: 1.5px solid #fef08a;
+    border-left: 4px solid #f59e0b;
+}
+.socratic-bubble.hint-level-2 {
+    background: #f0f9ff;
+    border: 1.5px solid #bae6fd;
+    border-left: 4px solid #0284c7;
+}
+.socratic-bubble.hint-level-3 {
+    background: #faf5ff;
+    border: 1.5px solid #e9d5ff;
+    border-left: 4px solid #9333ea;
+}
+
+.socratic-badge-hint-tag {
+    display: inline-block;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-bottom: 6px;
+}
+
+.socratic-badge-hint-tag.tag-1 {
+    background: #fef3c7;
+    color: #92400e;
+}
+.socratic-badge-hint-tag.tag-2 {
+    background: #dbeafe;
+    color: #1e40af;
+}
+.socratic-badge-hint-tag.tag-3 {
+    background: #ede9fe;
+    color: #5b21b6;
+}
+
+/* Vùng nhập câu hỏi của học sinh */
+.socratic-input-dock {
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
+}
+
+.socratic-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+/* Nút bấm hỏi Gia sư AI trực tiếp trong trang kết quả */
+.btn-socratic-ask-inline {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #93c5fd;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s ease;
+}
+.btn-socratic-ask-inline:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+/* ========================================================
+   MỤC 2: NGỮ CẢNH KÍCH HOẠT THÔNG MINH & INTERACTIVE SCRATCHPAD
+   ======================================================== */
+.step-socratic-action-bar {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.btn-socratic-step-ask {
+    background: #ffffff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 1px 3px rgba(37, 99, 235, 0.08);
+}
+.btn-socratic-step-ask:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #3b82f6;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(37, 99, 235, 0.18);
+}
+.btn-socratic-step-ask.has-error {
+    background: #fef2f2;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+.btn-socratic-step-ask.has-error:hover {
+    background: #fee2e2;
+    color: #b91c1c;
+    border-color: #ef4444;
+}
+
+/* INTERACTIVE SCRATCHPAD CARD */
+.socratic-scratchpad-card {
+    background: #f8fafc;
+    border: 1.5px solid #cbd5e1;
+    border-radius: 12px;
+    margin-bottom: 14px;
+    overflow: hidden;
+    transition: border-color 0.2s ease;
+}
+.socratic-scratchpad-card:focus-within {
+    border-color: #3b82f6;
+}
+
+.scratchpad-header {
+    background: #f1f5f9;
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid #e2e8f0;
+}
+.scratchpad-header:hover {
+    background: #e2e8f0;
+}
+
+.scratchpad-pill {
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #bbf7d0;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 1.5px 7px;
+    border-radius: 9999px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.scratchpad-body {
+    padding: 12px 14px;
+    background: #ffffff;
+}
+
+.scratchpad-input-container textarea {
+    font-family: inherit;
+    font-size: 13.5px;
+    resize: vertical;
+    min-height: 52px;
+}
+
+.math-quick-keys-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin: 8px 0;
+}
+
+.math-key-btn {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    color: #0f172a;
+    font-family: KaTeX_Math, 'Times New Roman', serif;
+    font-size: 12.5px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.math-key-btn:hover {
+    background: #eff6ff;
+    color: #2563eb;
+    border-color: #93c5fd;
+    transform: translateY(-1px);
+}
+
+.scratchpad-actions-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.scratchpad-result-box {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    line-height: 1.5;
+    animation: fadeIn 0.3s ease;
+}
+.scratchpad-result-box.correct {
+    background: #f0fdf4;
+    border: 1.5px solid #86efac;
+    color: #166534;
+}
+.scratchpad-result-box.progress {
+    background: #fffbeb;
+    border: 1.5px solid #fcd34d;
+    color: #92400e;
+}
+.scratchpad-result-box.incorrect {
+    background: #fef2f2;
+    border: 1.5px solid #fecaca;
+    color: #991b1b;
+}
+
+/* ========================================================
+   MỤC 3: TÁCH BIỆT 2 CHẾ ĐỘ: HỌC SINH VS GIÁO VIÊN
+   ======================================================== */
+.tutor-mode-switcher-bar {
+    display: flex;
+    gap: 6px;
+    background: #f1f5f9;
+    padding: 4px;
+    border-radius: 10px;
+    margin-bottom: 12px;
+    border: 1px solid #e2e8f0;
+}
+
+.tutor-mode-tab {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 7px 12px;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    text-align: center;
+}
+.tutor-mode-tab:hover {
+    color: #1e293b;
+    background: rgba(255, 255, 255, 0.6);
+}
+.tutor-mode-tab.active {
+    background: #ffffff;
+    color: #1d4ed8;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* 3 Nút Công cụ Giáo viên */
+.btn-socratic-hint.teacher-tool-1 {
+    background: #f0fdf4;
+    border-color: #86efac;
+    color: #166534;
+}
+.btn-socratic-hint.teacher-tool-1:hover {
+    background: #dcfce7;
+    border-color: #22c55e;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+}
+
+.btn-socratic-hint.teacher-tool-2 {
+    background: #eff6ff;
+    border-color: #93c5fd;
+    color: #1e40af;
+}
+.btn-socratic-hint.teacher-tool-2:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.btn-socratic-hint.teacher-tool-3 {
+    background: #fdf4ff;
+    border-color: #f0abfc;
+    color: #86198f;
+}
+.btn-socratic-hint.teacher-tool-3:hover {
+    background: #fae8ff;
+    border-color: #d946ef;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(217, 70, 239, 0.2);
+}
+
+.btn-copy-bubble-content {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    transition: all 0.15s ease;
+}
+.btn-copy-bubble-content:hover {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #93c5fd;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 640px) {
+    .tutor-mode-switcher-bar {
+        flex-direction: column;
+    }
+    .socratic-hint-buttons-grid {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+    .socratic-tutor-box {
+        padding: 15px;
+    }
+}
+
+/* ========================================================
+   MỤC 4: NHẬT KÝ TIẾN BỘ & HUY HIỆU VINH DANH (GROWTH TRACKER)
+   ======================================================== */
+.growth-tracker-box {
+    max-width: 760px;
+    width: 95%;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    padding: 20px 24px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.98);
+    box-shadow: 0 20px 50px rgba(15, 23, 42, 0.2);
+    text-align: left;
+    overflow-y: auto;
+}
+
+.growth-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+
+.growth-overview-card {
+    background: linear-gradient(135deg, #f0fdf4 0%, #e0f2fe 100%);
+    border: 1.5px solid #bbf7d0;
+    border-radius: 14px;
+    padding: 16px 18px;
+    margin-bottom: 16px;
+}
+
+.growth-level-badge {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+.growth-avatar-icon {
+    font-size: 38px;
+    background: #ffffff;
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.2);
+    flex-shrink: 0;
+}
+
+.growth-rank-info {
+    flex: 1;
+}
+
+.growth-rank-subtitle {
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #15803d;
+    text-transform: uppercase;
+}
+
+.growth-rank-title {
+    font-size: 17px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 2px 0 6px 0;
+}
+
+.growth-xp-bar-container {
+    width: 100%;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.growth-xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #22c55e, #3b82f6);
+    border-radius: 9999px;
+    transition: width 0.4s ease;
+}
+
+.growth-xp-text {
+    font-size: 11px;
+    color: #475569;
+    font-weight: 600;
+    display: block;
+    margin-top: 4px;
+}
+
+.growth-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    border-top: 1px dashed #cbd5e1;
+    padding-top: 12px;
+}
+
+.growth-stat-item {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+    border: 1px solid #e2e8f0;
+}
+
+.growth-stat-num {
+    font-size: 16px;
+    font-weight: 800;
+    color: #15803d;
+    display: block;
+}
+
+.growth-stat-label {
+    font-size: 10.5px;
+    color: #64748b;
+    font-weight: 600;
+    display: block;
+    margin-top: 2px;
+}
+
+.growth-section-title {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: #1e293b;
+    margin-bottom: 10px;
+}
+
+/* Lưới huy hiệu Badges */
+.growth-badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.growth-badge-card {
+    background: #ffffff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.growth-badge-card.unlocked {
+    border-color: #86efac;
+    background: linear-gradient(135deg, #ffffff 0%, #f0fdf4 100%);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.12);
+}
+.growth-badge-card.unlocked:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(34, 197, 94, 0.2);
+}
+
+.growth-badge-card.locked {
+    opacity: 0.65;
+    background: #f8fafc;
+}
+
+.badge-card-icon {
+    font-size: 26px;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: #f1f5f9;
+}
+.growth-badge-card.unlocked .badge-card-icon {
+    background: #dcfce7;
+}
+
+.badge-card-info {
+    flex: 1;
+}
+
+.badge-card-name {
+    font-size: 12.5px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1.25;
+}
+
+.badge-card-desc {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 3px;
+    line-height: 1.3;
+}
+
+.badge-card-status {
+    font-size: 10px;
+    font-weight: 700;
+    margin-top: 5px;
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+}
+.badge-card-status.achieved {
+    background: #dcfce7;
+    color: #15803d;
+}
+.badge-card-status.pending {
+    background: #f1f5f9;
+    color: #64748b;
+}
+
+/* Lịch sử hoạt động (Activity Log) */
+.growth-log-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+    padding-right: 4px;
+}
+
+.growth-log-item {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 12px;
+}
+
+.growth-log-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.growth-log-tag {
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+.growth-log-tag.correct {
+    background: #dcfce7;
+    color: #15803d;
+}
+.growth-log-tag.hint {
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.growth-log-xp {
+    font-weight: 800;
+    color: #16a34a;
+    font-size: 12px;
+    flex-shrink: 0;
+}
+
+.growth-modal-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-top: 1px solid #e2e8f0;
+    padding-top: 10px;
+    margin-top: 14px;
+}
+
+@media (max-width: 640px) {
+    .growth-stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .growth-badges-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+
 
 
