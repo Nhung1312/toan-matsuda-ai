@@ -87,7 +87,7 @@ Bước 4 - Phân tích đối chiếu từng bước (QUY TẮC BẮT BUỘC):
 Bước 5 - Ký hiệu & Công thức Toán học (CHUẨN LATEX CAO CẤP):
 - TẤT CẢ công thức Toán học trong \`studentLatex\`, \`solutionLatex\`, \`correctionLatex\`, \`problemStatementLatex\`, \`finalAnswerLatex\` PHẢI viết bằng cú pháp LaTeX chuẩn và đẹp:
   + Phân số: BẮT BUỘC dùng \\frac{tử}{mẫu} (ví dụ: \\frac{6^7}{9^2 \\cdot 125}, \\frac{(-3)^{10} \\cdot 15^3}{25^3 \\cdot (-9)^7}). Tuyệt đối KHÔNG dùng dấu gạch chéo thô a/b hay a/(b*c).
-  + Phép nhân: Dùng \\cdot hoặc \\times (ví dụ: 2^7 \\cdot 3^7), tuyệt đối KHÔNG dùng ký tự sao * hay dấu chấm văn bản.
+  + Phép nhân: BẮT BUỘC dùng \\cdot (ví dụ: 2^7 \\cdot 3^7, tuyệt đối KHÔNG dùng \\times để tránh lỗi escape JSON, tuyệt đối KHÔNG dùng ký tự sao * hay dấu chấm văn bản).
   + Lũy thừa: Luôn bọc ngoặc nhọn: (-3)^{10}, 15^3, 25^3, 2^{11}, (-9)^7.
   + Trong các phần lời văn (nhận xét \`comment\`, \`feedback\`, \`solutionText\`, \`explanation\`, \`summary\`): Mọi số liệu toán học, biểu thức, lũy thừa, phân số (như $125$, $4^2$, $\\frac{2}{9}$, $x$, $y$) BẮT BUỘC bọc trong cặp dấu $...$ để hiển thị công thức chuẩn đẹp!
 
@@ -365,6 +365,33 @@ app.post(
         throw parseErr;
       }
     }
+
+    // Tự động làm sạch và chuẩn hóa triệt để các chuỗi công thức LaTeX (sửa lỗi JSON escape \times -> imes, \text, \boxed...)
+    const sanitizeMathData = (val: any): any => {
+      if (typeof val === 'string') {
+        return val
+          .replace(/[\t\\]?imes\b/g, '\\cdot')
+          .replace(/\\times\b/g, '\\cdot')
+          .replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2')
+          .replace(/[\t\\]?ext\{/g, '\\text{')
+          .replace(/[\x08\\]?oxed\{/g, '\\boxed{')
+          .replace(/[\x0c\\]?rac\{/g, '\\frac{')
+          .replace(/[\x08\\]?egin\{/g, '\\begin{');
+      }
+      if (Array.isArray(val)) {
+        return val.map(sanitizeMathData);
+      }
+      if (val && typeof val === 'object') {
+        const out: any = {};
+        for (const k of Object.keys(val)) {
+          out[k] = sanitizeMathData(val[k]);
+        }
+        return out;
+      }
+      return val;
+    };
+
+    result = sanitizeMathData(result);
 
     if (result.score !== undefined && result.summary) {
       result.success = true;

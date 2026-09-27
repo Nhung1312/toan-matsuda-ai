@@ -1167,7 +1167,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- LATEX / KATEX RENDERING UTILITIES ---
+    // --- LATEX / KATEX RENDERING & MATH SANITIZATION UTILITIES ---
     function escapeHtml(str) {
         if (!str) return '';
         return String(str)
@@ -1178,10 +1178,45 @@ document.addEventListener('DOMContentLoaded', () => {
             .replace(/'/g, '&#039;');
     }
 
+    // Tự động làm sạch và sửa chữa triệt để mọi lỗi escape LaTeX (đặc biệt \times bị biến thành \t + imes, \text, \boxed, \frac...)
+    function sanitizeMathData(val) {
+        if (!val) return val;
+        if (typeof val === 'string') {
+            return val
+                .replace(/[\t\\]?imes\b/g, '\\cdot')
+                .replace(/\\times\b/g, '\\cdot')
+                .replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2')
+                .replace(/[\t\\]?ext\{/g, '\\text{')
+                .replace(/[\x08\\]?oxed\{/g, '\\boxed{')
+                .replace(/[\x0c\\]?rac\{/g, '\\frac{')
+                .replace(/[\x08\\]?egin\{/g, '\\begin{');
+        }
+        if (Array.isArray(val)) {
+            return val.map(sanitizeMathData);
+        }
+        if (typeof val === 'object') {
+            const out = {};
+            for (const k of Object.keys(val)) {
+                out[k] = sanitizeMathData(val[k]);
+            }
+            return out;
+        }
+        return val;
+    }
+
     // Normalizer: Tự động chuẩn hóa mọi chuỗi công thức thành LaTeX đẹp chuẩn mực
     function normalizeMathToLatex(raw) {
         if (!raw) return '';
         let s = String(raw).trim();
+
+        // 0. Sửa lỗi thoát chuỗi escape JSON (\times -> \t + imes, \text -> \t + ext...)
+        s = s.replace(/[\t\\]?imes\b/g, ' \\cdot ');
+        s = s.replace(/\\times\b/g, ' \\cdot ');
+        s = s.replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2');
+        s = s.replace(/[\t\\]?ext\{/g, '\\text{');
+        s = s.replace(/[\x08\\]?oxed\{/g, '\\boxed{');
+        s = s.replace(/[\x0c\\]?rac\{/g, '\\frac{');
+        s = s.replace(/[\x08\\]?egin\{/g, '\\begin{');
 
         // 1. Gỡ bỏ ký hiệu bao bọc dư thừa $...$, $$...$$, \(...\), \[...\]
         if ((s.startsWith('$$') && s.endsWith('$$')) || (s.startsWith('\\[') && s.endsWith('\\]'))) {
@@ -1257,6 +1292,13 @@ document.addEventListener('DOMContentLoaded', () => {
     function formatMathText(text) {
         if (!text) return '';
         let str = String(text).trim();
+
+        // Sửa lỗi imes và các escape bị lỗi trước khi nhận diện công thức
+        str = str.replace(/[\t\\]?imes\b/g, ' \\cdot ');
+        str = str.replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2');
+        str = str.replace(/[\t\\]?ext\{/g, '\\text{');
+        str = str.replace(/[\x08\\]?oxed\{/g, '\\boxed{');
+        str = str.replace(/[\x0c\\]?rac\{/g, '\\frac{');
         
         // 1. Khối công thức block: $$...$$ hoặc \[...\]
         str = str.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, open, math) => {
@@ -1877,6 +1919,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderResult(data) {
+        data = sanitizeMathData(data);
         currentGradingData = data;
 
         // Apply student mode / reference solution visibility class
@@ -3364,8 +3407,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- SMART A4 PRINTABLE SHEET BUILDER ---
     function buildPrintableSheet(customData = null, customImages = null, customInfo = null) {
         const sheet = document.getElementById('printable-student-sheet');
-        const data = customData || currentGradingData;
+        let data = customData || currentGradingData;
         if (!sheet || !data) return sheet;
+        data = sanitizeMathData(data);
 
         const branding = getBranding();
 
