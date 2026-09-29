@@ -983,6 +983,22 @@ main { padding-top: 80px; }
     border: none !important;
 }
 
+/* Đảm bảo căn thức và phân số KaTeX hiển thị rõ nét trên bản in / PDF */
+.printable-sheet .katex {
+    text-rendering: geometricPrecision;
+    font-size: 1.05em;
+}
+.printable-sheet .katex .sqrt-sign {
+    overflow: visible !important;
+}
+.printable-sheet .katex .sqrt-sign svg {
+    overflow: visible !important;
+    display: inline-block !important;
+}
+.printable-sheet .katex .sqrt-line {
+    border-top-width: 1.2px !important;
+}
+
 @page {
     size: A4 portrait;
     margin: 4mm 6mm;
@@ -1435,6 +1451,33 @@ kbd {
 }
 .remedial-solution-box strong {
     color: #14532d;
+}
+
+.btn-remedial-reroll {
+    background: #f0fdf4 !important;
+    color: #15803d !important;
+    border: 1px solid #bbf7d0 !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease !important;
+}
+.btn-remedial-reroll:hover {
+    background: #15803d !important;
+    color: #ffffff !important;
+    border-color: #166534 !important;
+    transform: translateY(-1px);
+}
+.btn-remedial-edit {
+    background: #eff6ff !important;
+    color: #1d4ed8 !important;
+    border: 1px solid #bfdbfe !important;
+    font-weight: 700 !important;
+    transition: all 0.2s ease !important;
+}
+.btn-remedial-edit:hover {
+    background: #1d4ed8 !important;
+    color: #ffffff !important;
+    border-color: #1e40af !important;
+    transform: translateY(-1px);
 }
 
 /* ========================================================

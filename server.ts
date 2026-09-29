@@ -109,7 +109,44 @@ Bước 8 - Phân loại ma trận đề & mức độ năng lực theo Thông t
   + "Nhận biết": Nhận diện công thức, định nghĩa, phát biểu quy tắc hoặc tính toán số học 1 bước cơ bản.
   + "Thông hiểu": Áp dụng trực tiếp quy tắc, biến đổi đơn giản, giải phương trình/hệ cơ bản.
   + "Vận dụng": Phối hợp nhiều bước tư duy, rút gọn phân thức phức tạp, giải phương trình chứa căn, chứng minh hình học.
-  + "Vận dụng cao": Bài toán thực tế tối ưu, bất đẳng thức, tìm GTLN/GTNN, câu phân loại học sinh giỏi.`;
+  + "Vận dụng cao": Bài toán thực tế tối ưu, bất đẳng thức, tìm GTLN/GTNN, câu phân loại học sinh giỏi.
+
+Bước 9 - Tự động thiết kế Bài tập Bổ trợ Cá nhân hóa tương tự cùng dạng (remedialExercise):
+- Đối với mỗi câu hỏi (đặc biệt câu học sinh bị trừ điểm, có lỗi sai hoặc cần củng cố):
+  + Tự động sáng tạo một bài toán mới HOÀN TOÀN TƯƠNG TỰ CÙNG DẠNG (isomorphic problem) với đề bài gốc, thay đổi số liệu hợp lý, nhắm thẳng vào kỹ năng hoặc lỗi sai mà học sinh vừa mắc phải (ví dụ: nếu sai ở bước tính biệt thức Delta và xét dấu khi nhân âm thì bài bổ trợ phải rèn luyện đúng phép tính Delta và đối chiếu nghiệm; nếu là hình học thì cho bài toán chứng minh tương tự).
+  + Thuộc tính remedialExercise:
+    * title: Tiêu đề rèn luyện (ví dụ: "Rèn luyện: Biệt thức \\Delta & Định lý Vi-et chứa tham số m")
+    * weakness: Lỗ hổng kiến thức chính cần khắc phục ở câu này
+    * problemLatex: Đề bài toán tương tự dạng LaTeX chuẩn
+    * hint: Gợi ý phương pháp giải nhắm thẳng vào lỗi sai học sinh vừa mắc phải
+    * solutionLatex: Lời giải mẫu chi tiết từng bước dạng LaTeX
+    * finalAnswer: Đáp số cuối cùng`;
+
+// Tự động làm sạch và chuẩn hóa triệt để các chuỗi công thức LaTeX (sửa lỗi JSON escape \times -> imes, \text, \boxed...)
+const sanitizeMathData = (val: any): any => {
+  if (typeof val === 'string') {
+    return val
+      .replace(/\\times\b/g, '\\cdot')
+      .replace(/[\t\\]imes\b/g, '\\cdot')
+      .replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2')
+      .replace(/\x0crac\{/g, '\\frac{')
+      .replace(/(?:\\+f+|\f)+\\*(?:frac\{|rac\{)/g, '\\frac{')
+      .replace(/[\t\\]ext\{/g, '\\text{')
+      .replace(/[\x08\\]oxed\{/g, '\\boxed{')
+      .replace(/[\x08\\]egin\{/g, '\\begin{');
+  }
+  if (Array.isArray(val)) {
+    return val.map(sanitizeMathData);
+  }
+  if (val && typeof val === 'object') {
+    const out: any = {};
+    for (const k of Object.keys(val)) {
+      out[k] = sanitizeMathData(val[k]);
+    }
+    return out;
+  }
+  return val;
+};
 
 // Health check endpoint (for monitoring and frontend debug verification)
 app.get(['/api/health', '/api/health/', '/health'], (req: Request, res: Response) => {
@@ -294,6 +331,18 @@ app.post(
                 },
                 required: ['strengths', 'mainErrors', 'knowledgeToReview'],
               },
+              remedialExercise: {
+                type: Type.OBJECT,
+                description: 'Bài tập bổ trợ tương tự cùng dạng (isomorphic problem) được AI thiết kế với số liệu mới dựa trên lỗi sai của học sinh',
+                properties: {
+                  title: { type: Type.STRING, description: 'Tiêu đề rèn luyện kèm dạng toán' },
+                  weakness: { type: Type.STRING, description: 'Lỗ hổng kiến thức chính cần khắc phục' },
+                  problemLatex: { type: Type.STRING, description: 'Đề bài toán tương tự dạng LaTeX' },
+                  hint: { type: Type.STRING, description: 'Gợi ý phương pháp giải nhắm thẳng vào lỗi sai' },
+                  solutionLatex: { type: Type.STRING, description: 'Lời giải chi tiết từng bước dạng LaTeX' },
+                  finalAnswer: { type: Type.STRING, description: 'Đáp số cuối cùng' },
+                },
+              },
             },
             required: ['questionId', 'score', 'maxScore', 'status', 'result', 'feedback', 'referenceSolution', 'analysis'],
           },
@@ -365,31 +414,6 @@ app.post(
         throw parseErr;
       }
     }
-
-    // Tự động làm sạch và chuẩn hóa triệt để các chuỗi công thức LaTeX (sửa lỗi JSON escape \times -> imes, \text, \boxed...)
-    const sanitizeMathData = (val: any): any => {
-      if (typeof val === 'string') {
-        return val
-          .replace(/[\t\\]?imes\b/g, '\\cdot')
-          .replace(/\\times\b/g, '\\cdot')
-          .replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2')
-          .replace(/[\t\\]?ext\{/g, '\\text{')
-          .replace(/[\x08\\]?oxed\{/g, '\\boxed{')
-          .replace(/[\x0c\\]?rac\{/g, '\\frac{')
-          .replace(/[\x08\\]?egin\{/g, '\\begin{');
-      }
-      if (Array.isArray(val)) {
-        return val.map(sanitizeMathData);
-      }
-      if (val && typeof val === 'object') {
-        const out: any = {};
-        for (const k of Object.keys(val)) {
-          out[k] = sanitizeMathData(val[k]);
-        }
-        return out;
-      }
-      return val;
-    };
 
     result = sanitizeMathData(result);
 
@@ -508,6 +532,92 @@ app.post(
       success: false,
       message: friendlyMessage,
     });
+  }
+});
+
+// ========================================================
+// MỤC 2: TỰ ĐỘNG SINH & ĐỔI BÀI TẬP BỔ TRỢ CÙNG DẠNG (ISOMORPHIC PROBLEM)
+// ========================================================
+app.post(['/api/remedial/reroll', '/api/v1/remedial/reroll'], async (req: Request, res: Response) => {
+  try {
+    const customKey = (req.headers['x-api-key'] || req.headers['x-gemini-api-key']) as string | undefined;
+    const ai = getGeminiClient(customKey);
+
+    const {
+      questionId,
+      problemStatementLatex,
+      classification,
+      errorComment,
+      feedback,
+      difficulty = 'standard',
+      currentExerciseTitle
+    } = req.body || {};
+
+    const promptText = `Bạn là chuyên gia sư phạm Toán THCS hàng đầu.
+Nhiệm vụ: Hãy thiết kế 01 BÀI TOÁN MỚI HOÀN TOÀN TƯƠNG TỰ CÙNG DẠNG (Isomorphic Problem) với đề bài gốc, nhằm rèn luyện khắc phục lỗ hổng kiến thức của học sinh.
+
+THÔNG TIN BÀI TOÁN GỐC VÀ HỌC SINH:
+- Câu hỏi số: ${questionId || '1'}
+- Phân loại: Lớp ${classification?.grade || 'THCS'}, Chuyên đề: ${classification?.topic || 'Toán'} - ${classification?.subtopic || ''}
+- Đề bài gốc: ${problemStatementLatex || 'Phương trình / Bài toán tương tự'}
+- Lỗ hổng kiến thức / Lỗi sai học sinh: ${errorComment || feedback || 'Cần rèn luyện tính toán cẩn thận và nắm chắc công thức'}
+- Yêu cầu độ khó: ${difficulty === 'easier' ? 'Nhẹ hơn một chút để học sinh lấy lại tự tin' : (difficulty === 'harder' ? 'Nâng cao hơn một chút để mở rộng tư duy' : 'Cùng độ khó tương đương')}
+${currentExerciseTitle ? `- Tránh trùng lặp với bài tập hiện tại: ${currentExerciseTitle}` : ''}
+
+YÊU CẦU ĐẦU RA:
+1. Đề bài mới phải có số liệu đẹp, giải ra kết quả gọn gàng, phù hợp chương trình THCS.
+2. Công thức toán dạng LaTeX chuẩn: dùng \\cdot cho phép nhân, phân số \\frac{a}{b}, căn \\sqrt{x}, bọc trong $...$ hoặc $$...$$.
+3. Gợi ý phương pháp giải hướng thẳng vào lỗi sai học sinh vừa mắc phải.
+4. Lời giải mẫu chi tiết từng bước.`;
+
+    const schema = {
+      type: Type.OBJECT,
+      properties: {
+        title: { type: Type.STRING, description: 'Tiêu đề rèn luyện (ví dụ: Rèn luyện: Biệt thức \\Delta & Định lý Vi-et)' },
+        weakness: { type: Type.STRING, description: 'Lỗ hổng kiến thức trọng tâm' },
+        problemLatex: { type: Type.STRING, description: 'Đề bài toán tương tự dạng LaTeX' },
+        hint: { type: Type.STRING, description: 'Gợi ý phương pháp giải' },
+        solutionLatex: { type: Type.STRING, description: 'Lời giải mẫu chi tiết từng bước' },
+        finalAnswer: { type: Type.STRING, description: 'Đáp số cuối cùng' }
+      },
+      required: ['title', 'weakness', 'problemLatex', 'hint', 'solutionLatex', 'finalAnswer']
+    };
+
+    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+    let respText: string | undefined;
+    for (const m of candidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model: m,
+          contents: promptText,
+          config: {
+            responseMimeType: 'application/json',
+            responseSchema: schema,
+          }
+        });
+        if (response.text) {
+          respText = response.text;
+          break;
+        }
+      } catch (e: any) {
+        console.warn(`Reroll model ${m} failed:`, e?.message || e);
+      }
+    }
+
+    if (!respText) {
+      return res.status(500).json({ success: false, message: 'Không thể sinh bài tập bổ trợ lúc này. Vui lòng thử lại.' });
+    }
+
+    let parsed = JSON.parse(respText);
+    parsed = sanitizeMathData(parsed);
+
+    return res.json({
+      success: true,
+      exercise: parsed
+    });
+  } catch (err: any) {
+    console.error('Reroll remedial error:', err);
+    return res.status(500).json({ success: false, message: err?.message || 'Lỗi khi tạo bài tập mới.' });
   }
 });
 

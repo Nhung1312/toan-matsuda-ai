@@ -1221,13 +1221,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let s = String(raw).trim();
 
         // 0. Sửa lỗi thoát chuỗi escape JSON (\times -> \t + imes, \text -> \t + ext...)
-        s = s.replace(/[\t\\]?imes\b/g, ' \\cdot ');
         s = s.replace(/\\times\b/g, ' \\cdot ');
+        s = s.replace(/[\t\\]imes\b/g, ' \\cdot ');
         s = s.replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2');
-        s = s.replace(/[\t\\]?ext\{/g, '\\text{');
-        s = s.replace(/[\x08\\]?oxed\{/g, '\\boxed{');
-        s = s.replace(/[\x0c\\]?rac\{/g, '\\frac{');
-        s = s.replace(/[\x08\\]?egin\{/g, '\\begin{');
+        s = s.replace(/\x0crac\{/g, '\\frac{');
+        s = s.replace(/(?:\\+f+|\f)+\\*(?:frac\{|rac\{)/g, '\\frac{');
+        s = s.replace(/[\t\\]ext\{/g, '\\text{');
+        s = s.replace(/[\x08\\]oxed\{/g, '\\boxed{');
+        s = s.replace(/[\x08\\]egin\{/g, '\\begin{');
 
         // 1. Gỡ bỏ ký hiệu bao bọc dư thừa $...$, $$...$$, \(...\), \[...\]
         if ((s.startsWith('$$') && s.endsWith('$$')) || (s.startsWith('\\[') && s.endsWith('\\]'))) {
@@ -1305,11 +1306,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let str = String(text).trim();
 
         // Sửa lỗi imes và các escape bị lỗi trước khi nhận diện công thức
-        str = str.replace(/[\t\\]?imes\b/g, ' \\cdot ');
+        str = str.replace(/\\times\b/g, ' \\cdot ');
+        str = str.replace(/[\t\\]imes\b/g, ' \\cdot ');
         str = str.replace(/([0-9a-zA-Z\)\}])\s*imes\s*([0-9a-zA-Z\(\{])/g, '$1 \\cdot $2');
-        str = str.replace(/[\t\\]?ext\{/g, '\\text{');
-        str = str.replace(/[\x08\\]?oxed\{/g, '\\boxed{');
-        str = str.replace(/[\x0c\\]?rac\{/g, '\\frac{');
+        str = str.replace(/\x0crac\{/g, '\\frac{');
+        str = str.replace(/(?:\\+f+|\f)+\\*(?:frac\{|rac\{)/g, '\\frac{');
+        str = str.replace(/[\t\\]ext\{/g, '\\text{');
+        str = str.replace(/[\x08\\]oxed\{/g, '\\boxed{');
+        str = str.replace(/[\x08\\]egin\{/g, '\\begin{');
         
         // 1. Khối công thức block: $$...$$ hoặc \[...\]
         str = str.replace(/(\$\$|\\\[)([\s\S]*?)(\$\$|\\\])/g, (match, open, math) => {
@@ -1601,7 +1605,47 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!errReason && q.feedback) errReason = q.feedback;
 
             // ========================================================
-            // CHUYÊN ĐỀ 1: LŨY THỪA VỚI SỐ MŨ TỰ NHIÊN & SỐ HỮU TỈ (LỚP 6 - 7)
+            // TẦNG 1: ƯU TIÊN SỐ 1 - BÀI TẬP DO GIÁO VIÊN ĐÃ CHỈNH SỬA HOẶC RE-ROLL
+            // ========================================================
+            if (q.customRemedialExercise && q.customRemedialExercise.problemLatex) {
+                remedialList.push({
+                    id: `rem_${idx}_custom`,
+                    questionIndex: idx,
+                    targetQuestion: `Câu ${qId}`,
+                    isAiGenerated: true,
+                    isCustom: true,
+                    title: q.customRemedialExercise.title || `🎯 Rèn luyện kiến thức Câu ${qId}`,
+                    weakness: q.customRemedialExercise.weakness || errReason,
+                    problemLatex: q.customRemedialExercise.problemLatex,
+                    hint: q.customRemedialExercise.hint || '',
+                    solutionLatex: q.customRemedialExercise.solutionLatex || '',
+                    finalAnswer: q.customRemedialExercise.finalAnswer || ''
+                });
+                return;
+            }
+
+            // ========================================================
+            // TẦNG 2: ƯU TIÊN SỐ 2 - BÀI TẬP TƯƠNG TỰ CÙNG DẠNG (ISOMORPHIC) DO AI SINH 1:1 TỪ ĐỀ BÀI GỐC
+            // ========================================================
+            if (q.remedialExercise && q.remedialExercise.problemLatex) {
+                remedialList.push({
+                    id: `rem_${idx}_ai`,
+                    questionIndex: idx,
+                    targetQuestion: `Câu ${qId}`,
+                    isAiGenerated: true,
+                    title: q.remedialExercise.title || `🎯 Rèn luyện: Dạng toán tương tự Câu ${qId}`,
+                    weakness: q.remedialExercise.weakness || errReason,
+                    problemLatex: q.remedialExercise.problemLatex,
+                    hint: q.remedialExercise.hint || '',
+                    solutionLatex: q.remedialExercise.solutionLatex || '',
+                    finalAnswer: q.remedialExercise.finalAnswer || ''
+                });
+                return;
+            }
+
+            // ========================================================
+            // TẦNG 3: NGÂN HÀNG DỰ PHÒNG THÔNG MINH THEO CHUYÊN ĐỀ (OFFLINE FALLBACK)
+            // ========================================================
             // Nhận diện: có chữ "lũy thừa", "luy thua", "số mũ", "cơ số" hoặc biểu thức có dạng a^b, (-c)^d
             // ========================================================
             const isExponentTopic = textAll.includes('lũy thừa') || 
@@ -1736,13 +1780,28 @@ document.addEventListener('DOMContentLoaded', () => {
             else if (textAll.includes('hệ phương trình') || textAll.includes('hpt')) {
                 remedialList.push({
                     id: `rem_${idx}_sys`,
-                    targetQuestion: `${qId} (Toán Lớp 9)`,
+                    targetQuestion: `Câu ${qId}`,
                     title: '🎯 Rèn luyện: Giải hệ phương trình bậc nhất hai ẩn (Lớp 9)',
                     weakness: errReason || 'Nhầm dấu khi nhân hệ số hoặc cộng trừ triệt tiêu ẩn số',
                     problemLatex: 'Giải hệ phương trình: $$\\begin{cases} 2x + 3y = 7 \\\\ 3x - 2y = 4 \\end{cases}$$',
                     hint: 'Nhân phương trình (1) với 2 và nhân phương trình (2) với 3 để hệ số của $y$ triệt tiêu khi cộng hai vế.',
                     solutionLatex: '$\\begin{cases} 4x + 6y = 14 \\\\ 9x - 6y = 12 \\end{cases} \\Rightarrow 13x = 26 \\Rightarrow x = 2$.\nThay vào: $2(2) + 3y = 7 \\Rightarrow 3y = 3 \\Rightarrow y = 1$.\nVậy $(x; y) = (2; 1)$.',
                     finalAnswer: '(x; y) = (2; 1)'
+                });
+            }
+            // ========================================================
+            // CHUYÊN ĐỀ 10: PHƯƠNG TRÌNH BẬC HAI & ĐỊNH LÝ VI-ET (LỚP 9 / LỚP 8 NÂNG CAO)
+            // ========================================================
+            else if (textAll.includes('vi-et') || textAll.includes('viet') || textAll.includes('bậc hai') || textAll.includes('bac hai') || textAll.includes('delta') || textAll.includes('\\delta') || textAll.includes('nghiệm phân biệt') || (textAll.includes('phương trình') && (textAll.includes('m') || textAll.includes('tham số') || qGrade === 9))) {
+                remedialList.push({
+                    id: `rem_${idx}_viet`,
+                    targetQuestion: `Câu ${qId}`,
+                    title: '🎯 Rèn luyện: Biệt thức $\\Delta$ & Hệ thức Vi-et chứa tham số $m$ (Toán Lớp 9)',
+                    weakness: errReason || 'Cần chú ý dấu khi tính biệt thức $\\Delta = b^2 - 4ac$ và đối chiếu điều kiện tồn tại 2 nghiệm phân biệt',
+                    problemLatex: 'Cho phương trình bậc hai: $$x^2 - 2(m - 1)x + m - 3 = 0 \\quad (1)$$ với $m$ là tham số.\na) Tính biệt thức $\\Delta$ (hoặc $\\Delta\') và tìm điều kiện của $m$ để phương trình (1) có hai nghiệm phân biệt $x_1, x_2$;\nb) Áp dụng định lý Vi-et, tìm giá trị của $m$ để hai nghiệm thỏa mãn hệ thức: $$(x_1 - 1)(x_2 - 1) = 0$$',
+                    hint: '1) Xác định hệ số: $a = 1, b = -2(m-1) \\Rightarrow b\' = -(m-1), c = m - 3$.\n2) Biệt thức $\\Delta\' = b\'^2 - ac = [-(m-1)]^2 - 1 \\cdot (m-3) = m^2 - 2m + 1 - m + 3 = m^2 - 3m + 4$.\n(Chú ý dấu âm: $- (m - 3) = - m + 3$). Biến đổi $\\Delta\' = \\left(m - \\frac{3}{2}\\right)^2 + \\frac{7}{4} > 0$ với mọi $m$.\n3) Theo Vi-et: $x_1 + x_2 = 2(m-1)$ và $x_1 x_2 = m - 3$. Khai triển $(x_1 - 1)(x_2 - 1) = x_1 x_2 - (x_1 + x_2) + 1 = 0$ rồi thay vào để tìm $m$.',
+                    solutionLatex: 'a) Ta có: $a = 1, b\' = -(m-1), c = m - 3$.\n$\\Delta\' = b\'^2 - ac = [-(m-1)]^2 - 1 \\cdot (m - 3) = m^2 - 2m + 1 - m + 3 = m^2 - 3m + 4$.\nBiến đổi: $\\Delta\' = \\left(m - \\frac{3}{2}\\right)^2 + \\frac{7}{4}$.\nVì $\\left(m - \\frac{3}{2}\\right)^2 \\ge 0$ nên $\\Delta\' \\ge \\frac{7}{4} > 0$ với mọi $m$.\nVậy phương trình luôn có hai nghiệm phân biệt $x_1, x_2$ với mọi giá trị của $m$.\n\nb) Áp dụng hệ thức Vi-et:\n$$\\begin{cases} x_1 + x_2 = 2(m - 1) \\\\ x_1 x_2 = m - 3 \\end{cases}$$\nBiến đổi hệ thức bài ra:\n$(x_1 - 1)(x_2 - 1) = 0 \\Leftrightarrow x_1 x_2 - (x_1 + x_2) + 1 = 0$\nThay Vi-et vào phương trình trên:\n$(m - 3) - 2(m - 1) + 1 = 0$\n$\\Leftrightarrow m - 3 - 2m + 2 + 1 = 0$\n$\\Leftrightarrow -m = 0 \\Leftrightarrow m = 0$.\nĐối chiếu điều kiện: Thỏa mãn với mọi $m$.\nVậy $m = 0$ là giá trị cần tìm.',
+                    finalAnswer: 'm = 0'
                 });
             }
             // ========================================================
@@ -1814,14 +1873,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
         let html = '';
         remedialItems.forEach((rm, idx) => {
+            const qIdx = (rm.questionIndex !== undefined) ? rm.questionIndex : idx;
             html += `
                 <div class="remedial-item-card slide-up" data-remedial-id="${rm.id}">
-                    <div class="remedial-item-header">
-                        <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="remedial-item-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                             <span class="remedial-topic-pill">Bài tập ${idx + 1}</span>
-                            <strong style="color: #1e293b; font-size: 13.5px;">${escapeHtml(rm.title)}</strong>
+                            <strong style="color: #1e293b; font-size: 13.5px;">${formatMathText(rm.title)}</strong>
+                            ${rm.isCustom ? `<span class="badge-tag" style="background: #fef3c7; color: #b45309; font-size: 10px; font-weight: 700; padding: 1.5px 6px; border-radius: 4px;">✏️ Đã sửa</span>` : (rm.isAiGenerated ? `<span class="badge-tag" style="background: #dbeafe; color: #1d4ed8; font-size: 10px; font-weight: 700; padding: 1.5px 6px; border-radius: 4px;">✨ AI sinh 1:1</span>` : '')}
                         </div>
-                        <span class="remedial-target-badge">🎯 Củng cố cho ${escapeHtml(rm.targetQuestion)}</span>
+                        <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                            <span class="remedial-target-badge">🎯 Củng cố cho ${escapeHtml(rm.targetQuestion)}</span>
+                            <button type="button" class="btn btn-outline btn-sm btn-remedial-reroll" data-qidx="${qIdx}" title="AI sinh bài toán mới tương tự cùng dạng với số liệu khác" style="font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                🎲 Đổi bài khác
+                            </button>
+                            <button type="button" class="btn btn-outline btn-sm btn-remedial-edit" data-qidx="${qIdx}" title="Chỉnh sửa đề bài & gợi ý theo ý Thầy/Cô" style="font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 4px;">
+                                ✏️ Sửa đề
+                            </button>
+                        </div>
                     </div>
                     
                     ${rm.weakness ? `
@@ -1889,6 +1958,28 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         });
 
+        // Reroll remedial exercise button (AI generates new isomorphic problem)
+        listContainer.querySelectorAll('.btn-remedial-reroll').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const qIdx = parseInt(btn.getAttribute('data-qidx'));
+                if (!isNaN(qIdx)) {
+                    window.rerollRemedial(qIdx, btn);
+                }
+            });
+        });
+
+        // Edit remedial exercise button (Teacher customizes problem & hints)
+        listContainer.querySelectorAll('.btn-remedial-edit').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const qIdx = parseInt(btn.getAttribute('data-qidx'));
+                if (!isNaN(qIdx)) {
+                    window.openEditRemedialModal(qIdx);
+                }
+            });
+        });
+
         // Toggle all solutions button
         const btnToggleAll = document.getElementById('btn-toggle-all-remedial-solutions');
         if (btnToggleAll) {
@@ -1930,6 +2021,137 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             };
         }
+    }
+
+    // --- TỰ ĐỘNG ĐỔI BÀI TẬP BỔ TRỢ CÙNG DẠNG (ISOMORPHIC RE-ROLL) ---
+    window.rerollRemedial = async function(qIdx, btnElement = null) {
+        if (!currentGradingData || !currentGradingData.questions) return;
+        const q = currentGradingData.questions[qIdx];
+        if (!q) return;
+
+        if (btnElement) {
+            btnElement.disabled = true;
+            btnElement.innerHTML = '⏳ Đang đổi...';
+        }
+
+        try {
+            const firstErrStep = q.analysis ? q.analysis.find(s => s.isFirstError || s.status !== 'correct') : null;
+            const payload = {
+                questionId: q.questionId || q.question || String(qIdx + 1),
+                problemStatementLatex: q.problemStatementLatex || '',
+                classification: q.classification || {},
+                errorComment: firstErrStep?.comment || q.feedback || '',
+                feedback: q.feedback || '',
+                difficulty: 'standard',
+                currentExerciseTitle: q.customRemedialExercise?.title || q.remedialExercise?.title || ''
+            };
+
+            const res = await fetch('/api/remedial/reroll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (data.success && data.exercise) {
+                q.customRemedialExercise = data.exercise;
+                renderResult(currentGradingData);
+                showToast(`🎲 Đã đổi sang bài toán mới tương tự cùng dạng cho Câu ${q.questionId || qIdx + 1}!`, 'success');
+
+                // Save to IndexedDB if session active
+                if (currentGradingSessionId && window.MatsudaDB) {
+                    try {
+                        const allH = await window.MatsudaDB.getAllHistory();
+                        const target = allH.find(h => h.id === currentGradingSessionId);
+                        if (target) {
+                            target.gradingData = currentGradingData;
+                            await window.MatsudaDB.saveHistory(target);
+                        }
+                    } catch (e) {
+                        console.warn('Sync IndexedDB error:', e);
+                    }
+                }
+            } else {
+                showToast(data.message || 'Không thể đổi bài toán lúc này.', 'warning');
+            }
+        } catch (err) {
+            console.error('Reroll remedial error:', err);
+            showToast('Lỗi kết nối khi đổi bài tập.', 'error');
+        } finally {
+            if (btnElement) {
+                btnElement.disabled = false;
+                btnElement.innerHTML = '🎲 Đổi bài khác';
+            }
+        }
+    };
+
+    // --- MODAL CHỈNH SỬA BÀI TẬP BỔ TRỢ THEO Ý GIÁO VIÊN ---
+    window.openEditRemedialModal = function(qIdx) {
+        if (!currentGradingData || !currentGradingData.questions) return;
+        const q = currentGradingData.questions[qIdx];
+        if (!q) return;
+
+        const modal = document.getElementById('remedial-edit-modal');
+        if (!modal) return;
+
+        const allRemedials = generateRemedialQuestions(currentGradingData);
+        const activeEx = q.customRemedialExercise || q.remedialExercise || (allRemedials.find(r => r.questionIndex === qIdx)) || {};
+
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        setVal('edit-remedial-qidx', qIdx);
+        setVal('edit-remedial-title', activeEx.title || `🎯 Rèn luyện kiến thức Câu ${q.questionId || qIdx + 1}`);
+        setVal('edit-remedial-weakness', activeEx.weakness || '');
+        setVal('edit-remedial-problem', activeEx.problemLatex || '');
+        setVal('edit-remedial-hint', activeEx.hint || '');
+        setVal('edit-remedial-solution', activeEx.solutionLatex || '');
+        setVal('edit-remedial-final', activeEx.finalAnswer || '');
+
+        modal.classList.remove('hidden');
+    };
+
+    const btnCloseRemedialEdit = document.getElementById('btn-close-remedial-edit');
+    const btnCancelRemedialEdit = document.getElementById('btn-cancel-remedial-edit');
+    const btnSaveRemedialEdit = document.getElementById('btn-save-remedial-edit');
+    const remedialEditModal = document.getElementById('remedial-edit-modal');
+
+    const closeRemedialModal = () => remedialEditModal?.classList.add('hidden');
+    if (btnCloseRemedialEdit) btnCloseRemedialEdit.onclick = closeRemedialModal;
+    if (btnCancelRemedialEdit) btnCancelRemedialEdit.onclick = closeRemedialModal;
+
+    if (btnSaveRemedialEdit) {
+        btnSaveRemedialEdit.onclick = async () => {
+            const qIdx = parseInt(document.getElementById('edit-remedial-qidx')?.value);
+            if (isNaN(qIdx) || !currentGradingData?.questions?.[qIdx]) return;
+
+            const q = currentGradingData.questions[qIdx];
+            const getVal = (id) => (document.getElementById(id)?.value || '').trim();
+
+            q.customRemedialExercise = {
+                title: getVal('edit-remedial-title') || `🎯 Rèn luyện kiến thức Câu ${q.questionId || qIdx + 1}`,
+                weakness: getVal('edit-remedial-weakness'),
+                problemLatex: getVal('edit-remedial-problem'),
+                hint: getVal('edit-remedial-hint'),
+                solutionLatex: getVal('edit-remedial-solution'),
+                finalAnswer: getVal('edit-remedial-final')
+            };
+
+            closeRemedialModal();
+            renderResult(currentGradingData);
+            showToast('💾 Đã lưu bài tập bổ trợ tùy chỉnh!', 'success');
+
+            if (currentGradingSessionId && window.MatsudaDB) {
+                try {
+                    const allH = await window.MatsudaDB.getAllHistory();
+                    const target = allH.find(h => h.id === currentGradingSessionId);
+                    if (target) {
+                        target.gradingData = currentGradingData;
+                        await window.MatsudaDB.saveHistory(target);
+                    }
+                } catch (e) {
+                    console.warn('Sync IndexedDB error:', e);
+                }
+            }
+        };
     }
 
     function renderResult(data) {
@@ -3800,7 +4022,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     html += `
                         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 5px; padding: 6px 8px; margin-bottom: 6px;">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3px; flex-wrap: wrap; gap: 4px;">
-                                <strong style="color: #1e3a8a; font-size: 11px;">Bài ${rIdx + 1}: ${escapeHtml(rm.title || 'Rèn luyện kỹ năng')} (${escapeHtml(rm.targetQuestion || '')})</strong>
+                                <strong style="color: #1e3a8a; font-size: 11px;">Bài ${rIdx + 1}: ${formatMathText(rm.title || 'Rèn luyện kỹ năng')} ${rm.targetQuestion ? `<span style="font-size: 10px; color: #64748b; font-weight: normal;">[${escapeHtml(rm.targetQuestion)}]</span>` : ''}</strong>
                                 ${rm.weakness ? `<span style="font-size: 10px; color: #b91c1c; font-weight: 600;">⚠️ ${escapeHtml(rm.weakness)}</span>` : ''}
                             </div>
                             <div style="font-size: 11px; color: #1e293b; line-height: 1.35; margin-bottom: 4px;">

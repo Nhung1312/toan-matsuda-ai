@@ -1407,6 +1407,53 @@
         </div>
     </div>
 
+    <!-- MODAL CHỈNH SỬA BÀI TẬP BỔ TRỢ (REMEDIAL EDIT MODAL) -->
+    <div id="remedial-edit-modal" class="modal-overlay hidden fade-in">
+        <div class="modal-content glass-card slide-up" style="max-width: 680px; width: 95%;">
+            <div class="modal-header">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 24px;">✏️</span>
+                    <div>
+                        <h3 class="gradient-text" style="font-size: 16px; margin: 0; font-weight: 800;">Chỉnh Sửa Bài Tập Bổ Trợ</h3>
+                        <span style="font-size: 12px; color: var(--text-secondary);">Thầy/Cô có thể tùy ý sửa đổi đề bài, số liệu và lời giải theo ý mình</span>
+                    </div>
+                </div>
+                <button type="button" id="btn-close-remedial-edit" class="btn btn-secondary btn-sm">✕ Đóng</button>
+            </div>
+            <div class="modal-body" style="padding: 16px 20px;">
+                <input type="hidden" id="edit-remedial-qidx">
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Tiêu đề rèn luyện:</label>
+                    <input type="text" id="edit-remedial-title" class="form-input" placeholder="🎯 Rèn luyện: Biệt thức Delta & Định lý Vi-et">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Lỗ hổng kiến thức / Trọng tâm củng cố:</label>
+                    <input type="text" id="edit-remedial-weakness" class="form-input" placeholder="Lỗi tính nhầm Delta do sai dấu âm...">
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Đề bài toán rèn luyện (hỗ trợ LaTeX $...$):</label>
+                    <textarea id="edit-remedial-problem" class="form-input" rows="3" placeholder="Cho phương trình: $x^2 - 2(m-1)x + m - 3 = 0$..."></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Gợi ý phương pháp giải:</label>
+                    <textarea id="edit-remedial-hint" class="form-input" rows="2" placeholder="Chú ý dấu khi nhân phân phối $-4ac$..."></textarea>
+                </div>
+                <div class="form-group" style="margin-bottom: 12px;">
+                    <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Lời giải chi tiết từng bước:</label>
+                    <textarea id="edit-remedial-solution" class="form-input" rows="4" placeholder="Bước 1: Tính Delta... Bước 2: Áp dụng Vi-et..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" style="font-weight: 700; font-size: 12.5px;">Đáp số cuối cùng:</label>
+                    <input type="text" id="edit-remedial-final" class="form-input" placeholder="m = 0">
+                </div>
+            </div>
+            <div class="modal-footer" style="padding: 12px 20px; display: flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0;">
+                <button type="button" id="btn-cancel-remedial-edit" class="btn btn-secondary btn-sm">Hủy bỏ</button>
+                <button type="button" id="btn-save-remedial-edit" class="btn btn-primary btn-sm" style="font-weight: 700;">💾 Lưu bài tập bổ trợ</button>
+            </div>
+        </div>
+    </div>
+
     <!-- BẢN IN / XUẤT FILE ẨN CHUẨN A4 CHO HỌC SINH (NẰM TRỰC TIẾP TRÊN BODY ĐỂ KHÔNG BỊ TRÔI LỀ TRÊN) -->
     <div id="export-sheet-wrapper" class="hidden-print-export" style="display: none;">
         <div id="printable-student-sheet" class="printable-sheet">
