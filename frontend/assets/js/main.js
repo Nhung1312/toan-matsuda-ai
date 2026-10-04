@@ -5416,6 +5416,25 @@ document.addEventListener('DOMContentLoaded', () => {
         btnBatchStop.classList.remove('hidden');
 
         const uploadUrl = `${getApiBaseUrl()}/api/v1/upload`;
+        let batchInterruptedByService = false;
+        let batchInterruptedMessage = '';
+
+        const isBatchCriticalServiceError = (response, data) => {
+            const status = Number(response?.status || 0);
+            const code = String(data?.code || '').toUpperCase();
+            const message = String(data?.message || '').toLowerCase();
+
+            return status === 429
+                || status === 503
+                || status === 401
+                || status === 403
+                || code === 'GRADING_HIGH_QUALITY_MODELS_UNAVAILABLE'
+                || message.includes('hết lượt')
+                || message.includes('quota')
+                || message.includes('quá tải')
+                || message.includes('api key')
+                || message.includes('không hợp lệ');
+        };
 
         for (let i = 0; i < targetStudents.length; i++) {
             if (batchCancelRequested) {
@@ -5471,7 +5490,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 if (!response.ok || !data.success) {
-                    throw new Error(data.message || `Lỗi máy chủ (${response.status})`);
+                    const errorMessage = data.message || `Lỗi máy chủ (${response.status})`;
+
+                    // Circuit breaker: nếu dịch vụ AI chất lượng cao hết quota/quá tải/API key lỗi,
+                    // dừng toàn bộ hàng đợi để không tạo thêm request vô ích.
+                    if (isBatchCriticalServiceError(response, data)) {
+                        const serviceError = new Error(errorMessage);
+                        serviceError.isBatchCriticalServiceError = true;
+                        serviceError.status = response.status;
+                        serviceError.code = data.code || '';
+                        throw serviceError;
+                    }
+
+                    throw new Error(errorMessage);
                 }
 
                 // Ghi nhận thành công
@@ -5508,10 +5539,26 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.error(`Lỗi chấm bài học sinh ${student.name}:`, err);
                 student.status = 'error';
                 student.errorMsg = err.message || 'Lỗi xử lý khi chấm bài';
-                showToast(`Lỗi khi chấm bài cho ${student.name}: ${err.message}`, 'error');
+
+                if (err?.isBatchCriticalServiceError) {
+                    batchInterruptedByService = true;
+                    batchInterruptedMessage = student.errorMsg;
+
+                    const doneNow = batchStudents.filter(s => s.status === 'done').length;
+                    const remainingNow = batchStudents.filter(s => s.status === 'pending').length;
+                    batchProgressStatusText.innerText = `Đã tạm dừng: ${doneNow}/${batchStudents.length} học sinh đã chấm, ${remainingNow} bài còn chờ.`;
+                    showToast(`Đã dừng chấm hàng loạt để tránh gọi API thừa. ${batchInterruptedMessage}`, 'warning');
+                } else {
+                    // Lỗi riêng của bài/ảnh: chỉ đánh dấu bài này lỗi và tiếp tục học sinh sau.
+                    showToast(`Lỗi khi chấm bài cho ${student.name}: ${err.message}`, 'error');
+                }
             }
 
             renderBatchUI();
+
+            if (batchInterruptedByService) {
+                break;
+            }
 
             // Nghỉ 800ms giữa các học sinh để đảm bảo an toàn tốc độ API
             if (i < targetStudents.length - 1 && !batchCancelRequested) {
@@ -5527,7 +5574,10 @@ document.addEventListener('DOMContentLoaded', () => {
         updateBatchProgress(doneCount, batchStudents.length);
         renderBatchUI();
 
-        if (!batchCancelRequested) {
+        if (batchInterruptedByService) {
+            const pendingCount = batchStudents.filter(s => s.status === 'pending').length;
+            batchProgressStatusText.innerText = `Tạm dừng do dịch vụ AI: đã chấm ${doneCount}/${batchStudents.length}; còn ${pendingCount} bài chờ. Có thể tiếp tục sau khi quota/model hoạt động lại.`;
+        } else if (!batchCancelRequested) {
             showToast(`Hoàn tất chấm bài cả lớp! Đã chấm thành công ${doneCount}/${batchStudents.length} học sinh.`, 'success');
         }
     }
