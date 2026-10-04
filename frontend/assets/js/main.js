@@ -73,6 +73,130 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     checkBackendHealth();
     
+    // --- PUBLIC TRIAL: 5 lượt chấm miễn phí, không cần đăng nhập ---
+    const SUPPORT_PHONE = '0775172026';
+
+    function getCustomGeminiKey() {
+        return (localStorage.getItem('MATSUDA_CUSTOM_GEMINI_KEY') || '').trim();
+    }
+
+    function buildAiHeaders(extra = {}) {
+        const headers = { ...extra };
+        const customKey = getCustomGeminiKey();
+        if (customKey) headers['x-api-key'] = customKey;
+        return headers;
+    }
+
+    function ensureTrialUi() {
+        if (!document.getElementById('matsuda-trial-button')) {
+            const navbar = document.querySelector('.navbar');
+            if (navbar) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.id = 'matsuda-trial-button';
+                btn.className = 'nav-btn-history';
+                btn.style.cssText = 'background:#fff7ed;color:#9a3412;border-color:#fdba74;font-weight:700;';
+                btn.innerText = '🎁 5 lượt trải nghiệm';
+                navbar.insertBefore(btn, navbar.firstChild);
+                btn.addEventListener('click', () => openTrialModal());
+            }
+        }
+
+        if (!document.getElementById('matsuda-trial-modal')) {
+            const overlay = document.createElement('div');
+            overlay.id = 'matsuda-trial-modal';
+            overlay.className = 'modal-overlay hidden fade-in';
+            overlay.innerHTML = `
+                <div class="modal-content glass-card slide-up" style="max-width:520px;width:95%;text-align:left;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:10px;">
+                        <h3 style="margin:0;font-size:20px;">🎁 Trải nghiệm Toán Matsuda AI</h3>
+                        <button type="button" id="btn-close-trial-modal" class="btn btn-secondary" style="padding:4px 10px;">✕</button>
+                    </div>
+                    <div id="trial-status-message" style="padding:12px;border-radius:10px;background:#fff7ed;color:#9a3412;margin-bottom:14px;line-height:1.5;">
+                        Mỗi trình duyệt được 5 lượt chấm miễn phí bằng AI của hệ thống.
+                    </div>
+                    <label for="trial-custom-api-key" style="display:block;font-weight:700;margin-bottom:6px;">API key Gemini riêng</label>
+                    <input id="trial-custom-api-key" type="password" autocomplete="off" placeholder="Dán API key của bạn để dùng tiếp..." style="width:100%;box-sizing:border-box;padding:11px 12px;border:1px solid #cbd5e1;border-radius:9px;margin-bottom:10px;">
+                    <p style="font-size:13px;color:#64748b;line-height:1.45;margin:0 0 14px;">API key riêng chỉ được lưu trên trình duyệt này. Khi có key riêng, các lượt chấm sẽ dùng quota của key đó và không trừ lượt trải nghiệm.</p>
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                        <button type="button" id="btn-save-trial-api-key" class="btn btn-primary">💾 Lưu API key</button>
+                        <button type="button" id="btn-clear-trial-api-key" class="btn btn-secondary">Xóa key riêng</button>
+                    </div>
+                    <div style="margin-top:16px;padding-top:12px;border-top:1px solid #e2e8f0;font-size:14px;">
+                        Cần hỗ trợ: <strong>${SUPPORT_PHONE}</strong>
+                    </div>
+                </div>`;
+            document.body.appendChild(overlay);
+
+            const close = () => overlay.classList.add('hidden');
+            document.getElementById('btn-close-trial-modal')?.addEventListener('click', close);
+            overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+            document.getElementById('btn-save-trial-api-key')?.addEventListener('click', async () => {
+                const value = (document.getElementById('trial-custom-api-key')?.value || '').trim();
+                if (!value) {
+                    showToast('Vui lòng dán API key Gemini trước khi lưu.', 'warning');
+                    return;
+                }
+                localStorage.setItem('MATSUDA_CUSTOM_GEMINI_KEY', value);
+                showToast('Đã lưu API key riêng trên trình duyệt này.', 'success');
+                close();
+                await refreshTrialStatus();
+            });
+            document.getElementById('btn-clear-trial-api-key')?.addEventListener('click', async () => {
+                localStorage.removeItem('MATSUDA_CUSTOM_GEMINI_KEY');
+                const input = document.getElementById('trial-custom-api-key');
+                if (input) input.value = '';
+                showToast('Đã xóa API key riêng. App sẽ dùng lượt trải nghiệm còn lại (nếu có).', 'info');
+                await refreshTrialStatus();
+            });
+        }
+    }
+
+    function openTrialModal(message = '') {
+        ensureTrialUi();
+        const modal = document.getElementById('matsuda-trial-modal');
+        const input = document.getElementById('trial-custom-api-key');
+        const statusBox = document.getElementById('trial-status-message');
+        if (input) input.value = getCustomGeminiKey();
+        if (message && statusBox) statusBox.innerText = message;
+        modal?.classList.remove('hidden');
+    }
+
+    async function refreshTrialStatus(serverTrial = null) {
+        ensureTrialUi();
+        const btn = document.getElementById('matsuda-trial-button');
+        const statusBox = document.getElementById('trial-status-message');
+        const customKey = getCustomGeminiKey();
+
+        if (customKey) {
+            if (btn) btn.innerText = '🔑 Đang dùng API key riêng';
+            if (statusBox) statusBox.innerText = `Bạn đang dùng API key riêng nên không bị giới hạn 5 lượt trải nghiệm. Cần hỗ trợ: ${SUPPORT_PHONE}.`;
+            return;
+        }
+
+        try {
+            let trial = serverTrial;
+            if (!trial) {
+                const res = await fetch(`${getApiBaseUrl()}/api/trial/status`, { credentials: 'same-origin' });
+                const data = await res.json();
+                trial = data;
+            }
+            const remaining = Number(trial?.remaining ?? 5);
+            const limit = Number(trial?.limit ?? 5);
+            if (btn) btn.innerText = remaining > 0 ? `🎁 Còn ${remaining}/${limit} lượt miễn phí` : '🔑 Hết lượt miễn phí';
+            if (statusBox) {
+                statusBox.innerText = remaining > 0
+                    ? `Bạn còn ${remaining}/${limit} lượt chấm trải nghiệm miễn phí. Hết lượt, hãy nhập API key Gemini riêng để tiếp tục.`
+                    : `Bạn đã dùng hết ${limit} lượt miễn phí. Hãy nhập API key Gemini riêng để tiếp tục. Cần hỗ trợ: ${SUPPORT_PHONE}.`;
+            }
+        } catch (err) {
+            console.warn('[Trial] Không đọc được trạng thái lượt thử:', err?.message || err);
+        }
+    }
+
+    ensureTrialUi();
+    refreshTrialStatus();
+    
     // --- DOM ELEMENTS ---
     const dropZone = document.getElementById('drop-zone');
     const fileInput = document.getElementById('file-input');
@@ -1807,7 +1931,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const res = await fetch('/api/remedial/reroll', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: buildAiHeaders({ 'Content-Type': 'application/json' }),
+                credentials: 'same-origin',
                 body: JSON.stringify(payload)
             });
 
@@ -4284,6 +4409,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 response = await fetch(uploadUrl, {
                     method: 'POST',
                     body: formData,
+                    headers: buildAiHeaders(),
+                    credentials: 'same-origin',
                     signal: controller.signal
                 });
             } finally {
@@ -4320,6 +4447,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (!response.ok) {
                 console.error('[API Response Error] Máy chủ trả về mã lỗi HTTP:', response.status, data);
+                if (response.status === 402 || data?.code === 'TRIAL_LIMIT_REACHED') {
+                    openTrialModal(data?.message || `Bạn đã dùng hết lượt trải nghiệm. Vui lòng nhập API key Gemini riêng. Cần hỗ trợ: ${SUPPORT_PHONE}.`);
+                }
                 throw new Error(data.message || `Lỗi máy chủ (${response.status})`);
             }
 
@@ -4327,6 +4457,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (data.success) {
                 loadingText.innerText = "Hoàn tất.";
+                refreshTrialStatus(data.trial || null);
 
                 // Lưu ảnh hiển thị theo trang
                 currentGradingImages = uploadedPages.map((p, idx) => ({
@@ -5424,7 +5555,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const code = String(data?.code || '').toUpperCase();
             const message = String(data?.message || '').toLowerCase();
 
-            return status === 429
+            return status === 402
+                || status === 429
                 || status === 503
                 || status === 401
                 || status === 403
@@ -5468,16 +5600,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 // Header custom API key nếu người dùng cài đặt
-                const headers = {};
-                const customKey = localStorage.getItem('MATSUDA_CUSTOM_GEMINI_KEY');
-                if (customKey) {
-                    headers['x-api-key'] = customKey;
-                }
+                const headers = buildAiHeaders();
 
                 const response = await fetch(uploadUrl, {
                     method: 'POST',
                     body: formData,
-                    headers: headers
+                    headers: headers,
+                    credentials: 'same-origin'
                 });
 
                 const ct = response.headers.get('content-type') || '';
@@ -5495,6 +5624,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Circuit breaker: nếu dịch vụ AI chất lượng cao hết quota/quá tải/API key lỗi,
                     // dừng toàn bộ hàng đợi để không tạo thêm request vô ích.
                     if (isBatchCriticalServiceError(response, data)) {
+                        if (response.status === 402 || data?.code === 'TRIAL_LIMIT_REACHED') {
+                            openTrialModal(data?.message || `Bạn đã dùng hết lượt trải nghiệm. Vui lòng nhập API key Gemini riêng. Cần hỗ trợ: ${SUPPORT_PHONE}.`);
+                        }
                         const serviceError = new Error(errorMessage);
                         serviceError.isBatchCriticalServiceError = true;
                         serviceError.status = response.status;
@@ -5512,6 +5644,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 student.verdict = getScoreTier(student.score).badge;
                 student.summary = data.summary || '';
                 student.gradingData = data;
+                refreshTrialStatus(data.trial || null);
 
                 // Tự động lưu bài chấm vào IndexedDB lịch sử
                 try {
@@ -6272,7 +6405,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const resp = await fetch('/api/tutor/socratic', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: buildAiHeaders({ 'Content-Type': 'application/json' }),
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     problem,
                     context: socraticActiveContext,
@@ -6313,7 +6447,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const resp = await fetch('/api/tutor/socratic', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: buildAiHeaders({ 'Content-Type': 'application/json' }),
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     problem,
                     context: socraticActiveContext,
@@ -6509,7 +6644,8 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const resp = await fetch('/api/tutor/verify-scratchpad', {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: buildAiHeaders({ 'Content-Type': 'application/json' }),
+                credentials: 'same-origin',
                     body: JSON.stringify({
                         problem,
                         context: socraticActiveContext,
@@ -6750,7 +6886,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const resp = await fetch('/api/tutor/teacher-assist', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: buildAiHeaders({ 'Content-Type': 'application/json' }),
+                credentials: 'same-origin',
                 body: JSON.stringify({
                     action,
                     problem,

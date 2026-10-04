@@ -6,6 +6,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { GoogleGenAI, Type } from '@google/genai';
+import { createHmac, timingSafeEqual } from 'crypto';
 dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,6 +20,62 @@ const GRADING_PRO_MODEL = process.env.GRADING_PRO_MODEL || 'gemini-pro-latest';
 const GRADING_MODELS = Array.from(new Set([GRADING_PRIMARY_MODEL, GRADING_PRO_MODEL].filter(Boolean)));
 const CONFIDENCE_REVIEW_THRESHOLD = 0.85;
 const CONFIDENCE_UNCLEAR_THRESHOLD = 0.65;
+// Public pilot: no login required. Each browser gets a signed 5-grading free trial.
+// The signed cookie prevents casual editing of the counter. Clearing cookies/new browser can reset it,
+// which is acceptable for the current feedback-testing phase. Paid/auth mode can replace this later.
+const FREE_GRADING_LIMIT = Math.max(1, Number(process.env.FREE_GRADING_LIMIT || 5));
+const SUPPORT_PHONE = process.env.SUPPORT_PHONE || '0775172026';
+const TRIAL_COOKIE_NAME = 'matsuda_trial_v1';
+const TRIAL_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 365;
+const getTrialSigningSecret = () => process.env.TRIAL_SIGNING_SECRET || process.env.GEMINI_API_KEY || 'matsuda-trial-dev-secret';
+const parseCookies = (req) => {
+    const raw = String(req.headers.cookie || '');
+    return raw.split(';').reduce((acc, part) => {
+        const idx = part.indexOf('=');
+        if (idx <= 0)
+            return acc;
+        const key = part.slice(0, idx).trim();
+        const value = part.slice(idx + 1).trim();
+        if (key)
+            acc[key] = decodeURIComponent(value);
+        return acc;
+    }, {});
+};
+const signTrialPayload = (payloadB64) => createHmac('sha256', getTrialSigningSecret()).update(payloadB64).digest('base64url');
+const readTrialUsage = (req) => {
+    try {
+        const token = parseCookies(req)[TRIAL_COOKIE_NAME];
+        if (!token)
+            return 0;
+        const [payloadB64, signature] = token.split('.');
+        if (!payloadB64 || !signature)
+            return 0;
+        const expected = signTrialPayload(payloadB64);
+        const sigBuf = Buffer.from(signature);
+        const expectedBuf = Buffer.from(expected);
+        if (sigBuf.length !== expectedBuf.length || !timingSafeEqual(sigBuf, expectedBuf))
+            return 0;
+        const payload = JSON.parse(Buffer.from(payloadB64, 'base64url').toString('utf8'));
+        const used = Math.floor(Number(payload?.used || 0));
+        return Number.isFinite(used) ? Math.max(0, Math.min(used, FREE_GRADING_LIMIT)) : 0;
+    }
+    catch {
+        return 0;
+    }
+};
+const setTrialUsageCookie = (res, used) => {
+    const payloadB64 = Buffer.from(JSON.stringify({ used: Math.max(0, Math.min(Math.floor(used), FREE_GRADING_LIMIT)), v: 1 }), 'utf8').toString('base64url');
+    const token = `${payloadB64}.${signTrialPayload(payloadB64)}`;
+    const secure = process.env.NODE_ENV === 'production' ? '; Secure' : '';
+    res.setHeader('Set-Cookie', `${TRIAL_COOKIE_NAME}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${TRIAL_COOKIE_MAX_AGE_SECONDS}${secure}`);
+};
+const hasCustomApiKey = (req) => Boolean((req.headers['x-api-key'] || req.headers['x-gemini-api-key']));
+const trialLimitResponse = (res) => res.status(402).json({
+    success: false,
+    code: 'TRIAL_LIMIT_REACHED',
+    message: `Bạn đã dùng hết ${FREE_GRADING_LIMIT} lượt chấm trải nghiệm miễn phí. Để tiếp tục, vui lòng nhập API key Gemini của bạn. Cần hỗ trợ: ${SUPPORT_PHONE}.`,
+    trial: { limit: FREE_GRADING_LIMIT, used: FREE_GRADING_LIMIT, remaining: 0, supportPhone: SUPPORT_PHONE }
+});
 const normalizeText = (value) => String(value || '').toLowerCase();
 const isGeometryQuestion = (question) => {
     const probe = normalizeText([
@@ -245,6 +302,20 @@ app.get(['/api/health', '/api/health/', '/health'], (req, res) => {
         backend: 'online',
     });
 });
+// Trial status for the public pilot. No account/login is required.
+app.get(['/api/trial/status', '/api/v1/trial/status'], (req, res) => {
+    const customKey = hasCustomApiKey(req);
+    const used = readTrialUsage(req);
+    return res.status(200).json({
+        success: true,
+        mode: customKey ? 'custom_key' : 'free_trial',
+        limit: FREE_GRADING_LIMIT,
+        used,
+        remaining: Math.max(0, FREE_GRADING_LIMIT - used),
+        exhausted: used >= FREE_GRADING_LIMIT,
+        supportPhone: SUPPORT_PHONE,
+    });
+});
 // AI Studio preview iframe upload fallback handler
 app.all(['/_/upload*', '/upload*'], (req, res) => {
     return res.status(200).json({ success: true, message: 'Upload endpoint ready' });
@@ -279,6 +350,10 @@ app.post(['/api/v1/upload', '/api/v1/upload/', '/api/upload'], (req, res, next) 
             });
         }
         const customKey = req.headers['x-api-key'] || req.headers['x-gemini-api-key'];
+        const trialUsedBefore = readTrialUsage(req);
+        if (!customKey && trialUsedBefore >= FREE_GRADING_LIMIT) {
+            return trialLimitResponse(res);
+        }
         let ai;
         try {
             ai = getGeminiClient(customKey);
@@ -710,6 +785,21 @@ app.post(['/api/v1/upload', '/api/v1/upload/', '/api/upload'], (req, res, next) 
                 }
             }
         }
+        if (!customKey) {
+            const nextUsed = Math.min(FREE_GRADING_LIMIT, trialUsedBefore + 1);
+            setTrialUsageCookie(res, nextUsed);
+            result.trial = {
+                mode: 'free_trial',
+                limit: FREE_GRADING_LIMIT,
+                used: nextUsed,
+                remaining: Math.max(0, FREE_GRADING_LIMIT - nextUsed),
+                exhausted: nextUsed >= FREE_GRADING_LIMIT,
+                supportPhone: SUPPORT_PHONE,
+            };
+        }
+        else {
+            result.trial = { mode: 'custom_key', supportPhone: SUPPORT_PHONE };
+        }
         return res.json(result);
     }
     catch (error) {
@@ -751,6 +841,9 @@ app.post(['/api/v1/upload', '/api/v1/upload/', '/api/upload'], (req, res, next) 
 app.post(['/api/remedial/reroll', '/api/v1/remedial/reroll'], async (req, res) => {
     try {
         const customKey = (req.headers['x-api-key'] || req.headers['x-gemini-api-key']);
+        if (!customKey && readTrialUsage(req) >= FREE_GRADING_LIMIT) {
+            return trialLimitResponse(res);
+        }
         const ai = getGeminiClient(customKey);
         const { questionId, problemStatementLatex, classification, errorComment, feedback, difficulty = 'standard', currentExerciseTitle, referenceSolution, methodAnchor, studentGrade } = req.body || {};
         const promptText = `Bạn là chuyên gia sư phạm Toán THCS hàng đầu.
@@ -838,6 +931,9 @@ YÊU CẦU ĐẦU RA:
 app.post(['/api/tutor/socratic', '/api/v1/tutor/socratic'], async (req, res) => {
     try {
         const customKey = (req.headers['x-api-key'] || req.headers['x-gemini-api-key']);
+        if (!customKey && readTrialUsage(req) >= FREE_GRADING_LIMIT) {
+            return trialLimitResponse(res);
+        }
         const ai = getGeminiClient(customKey);
         const { problem, context, level, studentMessage, chatHistory, mode } = req.body || {};
         if (!problem && !studentMessage) {
@@ -952,6 +1048,9 @@ QUY TẮC CÔNG THỨC TOÁN:
 app.post(['/api/tutor/verify-scratchpad', '/api/v1/tutor/verify-scratchpad'], async (req, res) => {
     try {
         const customKey = (req.headers['x-api-key'] || req.headers['x-gemini-api-key']);
+        if (!customKey && readTrialUsage(req) >= FREE_GRADING_LIMIT) {
+            return trialLimitResponse(res);
+        }
         const ai = getGeminiClient(customKey);
         const { problem, context, scratchpadText, scratchpadImage } = req.body || {};
         if (!scratchpadText && !scratchpadImage) {
@@ -1075,6 +1174,9 @@ QUY TẮC TOÁN HỌC:
 app.post(['/api/tutor/teacher-assist', '/api/v1/tutor/teacher-assist'], async (req, res) => {
     try {
         const customKey = (req.headers['x-api-key'] || req.headers['x-gemini-api-key']);
+        if (!customKey && readTrialUsage(req) >= FREE_GRADING_LIMIT) {
+            return trialLimitResponse(res);
+        }
         const ai = getGeminiClient(customKey);
         const { action, problem, context, studentName, teacherName, schoolName } = req.body || {};
         if (!problem && !context) {
