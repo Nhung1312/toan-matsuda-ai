@@ -16,6 +16,89 @@ const app = express();
 const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
 const HOST = '0.0.0.0';
 
+// Grading is intentionally restricted to high-quality models only.
+// These can be overridden in Vercel/AI Studio without touching source code.
+const GRADING_PRIMARY_MODEL = process.env.GRADING_PRIMARY_MODEL || 'gemini-3.8-flash';
+const GRADING_PRO_MODEL = process.env.GRADING_PRO_MODEL || 'gemini-pro-latest';
+const GRADING_MODELS = Array.from(new Set([GRADING_PRIMARY_MODEL, GRADING_PRO_MODEL].filter(Boolean)));
+
+const CONFIDENCE_REVIEW_THRESHOLD = 0.85;
+const CONFIDENCE_UNCLEAR_THRESHOLD = 0.65;
+
+const normalizeText = (value: any) => String(value || '').toLowerCase();
+
+const isGeometryQuestion = (question: any) => {
+  const probe = normalizeText([
+    question?.classification?.topic,
+    question?.classification?.subtopic,
+    question?.classification?.problemType,
+    question?.referenceSolution?.structureType,
+    question?.problemStatementLatex,
+    question?.referenceSolution?.hypothesisLatex,
+    question?.referenceSolution?.conclusionLatex
+  ].join(' '));
+  return probe.includes('hình') || probe.includes('geometry');
+};
+
+const CURRICULUM_GUARD_MARKERS = [
+  'vi-et', 'viet', 'delta', '\u0394', 'bất đẳng thức', 'gtln', 'gtnn', 'cauchy', 'cos', 'sin', 'tan',
+  'lượng giác', 'đường tròn', 'tiếp tuyến', 'phương trình bậc hai', 'tham số m', 'căn thức'
+];
+
+const validateRemedialExercise = (exercise: any, sourceContext: any) => {
+  if (!exercise || !exercise.problemLatex || !exercise.solutionLatex || !exercise.methodAnchor || !exercise.curriculumCheck) {
+    return { ok: false, reason: 'Thiếu dữ liệu khóa phương pháp/phạm vi.' };
+  }
+
+  const sourceText = normalizeText([
+    sourceContext?.problemStatementLatex,
+    sourceContext?.referenceSolution?.solutionText,
+    ...(sourceContext?.referenceSolution?.steps || []).map((s: any) => `${s?.solutionLatex || ''} ${s?.explanation || ''}`),
+    sourceContext?.classification?.topic,
+    sourceContext?.classification?.subtopic,
+    sourceContext?.classification?.problemType
+  ].join(' '));
+  const generatedText = normalizeText(`${exercise.problemLatex} ${exercise.hint} ${exercise.solutionLatex} ${exercise.methodAnchor}`);
+
+  const introduced = CURRICULUM_GUARD_MARKERS.filter(marker => generatedText.includes(marker.toLowerCase()) && !sourceText.includes(marker.toLowerCase()));
+  if (introduced.length > 0) {
+    return { ok: false, reason: `Bài luyện đưa thêm kiến thức ngoài bài gốc: ${introduced.join(', ')}` };
+  }
+
+  const check = normalizeText(exercise.curriculumCheck);
+  if (!(check.includes('không') || check.includes('đúng') || check.includes('giữ'))) {
+    return { ok: false, reason: 'curriculumCheck chưa xác nhận rõ phạm vi.' };
+  }
+
+  return { ok: true };
+};
+
+const classifyGeminiError = (error: any) => {
+  const raw = `${error?.message || ''} ${error?.status || ''} ${error?.code || ''} ${String(error)}`.toLowerCase();
+  if (raw.includes('resource_exhausted') || raw.includes('429') || raw.includes('quota')) return 'quota';
+  if (raw.includes('503') || raw.includes('overload') || raw.includes('high demand') || raw.includes('unavailable')) return 'overloaded';
+  if (raw.includes('api_key') || raw.includes('api key not valid') || raw.includes('permission_denied') || raw.includes('401') || raw.includes('403')) return 'auth';
+  if (raw.includes('fetch') || raw.includes('network') || raw.includes('econn') || raw.includes('timeout')) return 'network';
+  return 'other';
+};
+
+const gradingUnavailableMessage = (errors: Array<{ model: string; kind: string }>) => {
+  const kinds = new Set(errors.map((e) => e.kind));
+  if (kinds.has('auth')) {
+    return 'Không thể chấm bài vì API key chưa hợp lệ hoặc chưa có quyền dùng model chấm chất lượng cao. Vui lòng kiểm tra cấu hình API.';
+  }
+  if (kinds.has('quota')) {
+    return 'Tạm thời chưa thể chấm bài: các model chấm chất lượng cao hiện đã hết lượt/quota. Hệ thống không chuyển sang model thấp hơn để tránh chấm sai. Vui lòng thử lại sau.';
+  }
+  if (kinds.has('overloaded')) {
+    return 'Tạm thời chưa thể chấm bài: các model chấm chất lượng cao đang quá tải. Hệ thống không chuyển sang model thấp hơn để tránh chấm sai. Vui lòng thử lại sau.';
+  }
+  if (kinds.has('network')) {
+    return 'Tạm thời chưa thể chấm bài do lỗi kết nối tới dịch vụ AI. Không có model thấp hơn nào được dùng thay thế.';
+  }
+  return 'Tạm thời chưa thể chấm bài bằng model chất lượng cao. Hệ thống đã dừng thay vì chuyển sang model thấp hơn để đảm bảo độ tin cậy của điểm số.';
+};
+
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -69,6 +152,15 @@ Bước 2 - TỰ GIẢI ĐỘC LẬP TỪ ĐẦU (Không nhìn bài học sinh �
   + Dạng toán thực tế: Gọi ẩn & điều kiện, lập phương trình/hệ, giải, đối chiếu điều kiện thực tế, đơn vị và kết luận.
   + Dạng thống kê & xác suất: Đọc dữ liệu, tính toán, kết luận.
 
+Bước 2A - GEOMETRY VISION GUARD (bắt buộc nếu là bài hình học có hình vẽ):
+- Trước khi kết luận hoặc chứng minh, PHẢI quan sát hình vẽ trước và lập bản đọc hình nội bộ.
+- Phải nhận diện rõ các đối tượng có trên hình: điểm, đoạn thẳng, đường thẳng, tia, góc, tam giác, đường tròn, tiếp tuyến, bán kính, đường kính, trung điểm, giao điểm...
+- Phải liệt kê các quan hệ nhìn thấy/đọc chắc được từ đề và ký hiệu trên hình vào explicitRelations, ví dụ: vuông góc, song song, bằng nhau, trung điểm, tiếp tuyến, góc bằng nhau.
+- Nếu có quan hệ chỉ suy đoán từ hình dáng (ví dụ nhìn giống vuông, giống cân, giống song song) nhưng đề hoặc ký hiệu chưa xác nhận, PHẢI đưa vào uncertainRelations và KHÔNG được dùng làm dữ kiện để chấm.
+- TUYỆT ĐỐI KHÔNG suy diễn theo cảm giác thị giác. Ví dụ: nhìn hình giống vuông KHÔNG có nghĩa là vuông góc; nhìn hai đoạn giống nhau KHÔNG có nghĩa là bằng nhau nếu không có ký hiệu hoặc dữ kiện đề bài.
+- Nếu ký hiệu trên hình đọc không chắc, phải hạ confidence và ghi rõ cần giáo viên kiểm tra.
+- Với bài hình học, chỉ sử dụng các quan hệ thuộc một trong 3 nguồn sau: (1) đề bài cho, (2) ký hiệu trên hình xác nhận, (3) hệ quả suy ra hợp lệ từ các dữ kiện trước bằng định lý/tiên đề nêu rõ trong lời giải.
+
 Bước 3 - Đọc bài làm học sinh từ ảnh gốc:
 - Giữ nguyên ảnh gốc, không sửa ảnh. Phân biệt rõ số mũ ($3^5$ vs $5^3$), dấu âm, phân số, căn, ngoặc, ký hiệu hình học.
 - Nếu nét chữ quá mờ hoặc ký hiệu không chắc chắn: status="unclear", gán confidence thấp (< 0.70) và ghi rõ trong comment để giáo viên kiểm tra.
@@ -104,6 +196,20 @@ Bước 7 - Nguyên tắc cho điểm sư phạm:
 - Tổng điểm toàn bài (score ở root) phải khớp với tổng điểm đạt được của các câu hỏi.
 - Tóm tắt tổng quan (summary) phải nêu rõ tình trạng bài làm trung thực: nếu có lỗi sai thì chỉ rõ lỗi ở câu nào, bước nào; không nhận xét "làm đúng hoàn toàn" khi có bước bị sai!
 
+Bước 7B - Chấm điểm theo Ý/Đơn vị kiến thức, KHÔNG chia đều theo số dòng:
+- Mỗi câu phải tạo scoreBreakdown gồm các tiêu chí/ý chấm thực sự có giá trị toán học (ví dụ: thiết lập đúng, biến đổi chính, điều kiện, kết luận), không coi mỗi dòng viết là một tiêu chí điểm.
+- Tổng maxPoints của scoreBreakdown phải bằng maxScore của câu; tổng earnedPoints phải bằng score của câu.
+- Lỗi đầu tiên làm mất điểm đúng tiêu chí chứa lỗi đó. Lỗi kéo theo KHÔNG trừ lặp ở các tiêu chí sau nếu thao tác sau đúng trên kết quả sai trước đó.
+- Lỗi độc lập mới được trừ ở tiêu chí tương ứng. Thiếu kết luận/điều kiện chỉ trừ phần điểm đã dành cho kết luận/điều kiện, không xóa điểm các phần trước làm đúng.
+- Nếu ảnh không đọc rõ đủ để chấm chắc chắn, KHÔNG tự đoán điểm; đánh dấu status="unclear" và ghi rõ cần giáo viên kiểm tra.
+
+KHÓA PHẠM VI CHƯƠNG TRÌNH CHO BÀI TỰ LUYỆN:
+- Nếu hệ thống cung cấp lớp học của học sinh, PHẢI dùng lớp đó làm mốc; không được tự nâng lớp chỉ vì đề khó.
+- Bài bổ trợ phải là bản đẳng cấu của chính đề gốc: giữ nguyên kiến thức, phương pháp, số bước tư duy và loại kỹ năng; chỉ đổi số liệu/tên đại lượng/bối cảnh ở mức tối thiểu.
+- TUYỆT ĐỐI KHÔNG thêm định lý, công thức, kỹ thuật, khái niệm hoặc mẹo nâng cao không cần thiết để giải đề gốc, kể cả khi kiến thức đó thuộc THCS.
+- Nếu không chắc một kỹ thuật có nằm trong phạm vi bài gốc hay không: KHÔNG dùng kỹ thuật đó. Ưu tiên phương pháp đã xuất hiện trong đáp án chuẩn của đề gốc.
+- Bài bổ trợ không được biến thành bài HSG, cực trị, bất đẳng thức, tham số, Vi-et, Delta, lượng giác, đường tròn... trừ khi chính đề gốc đã thuộc đúng dạng đó.
+
 Bước 8 - Phân loại ma trận đề & mức độ năng lực theo Thông tư 22/27 của Bộ GD&ĐT:
 - Mỗi câu hỏi BẮT BUỘC gán thuộc tính 'level' thuộc đúng 1 trong 4 mức độ:
   + "Nhận biết": Nhận diện công thức, định nghĩa, phát biểu quy tắc hoặc tính toán số học 1 bước cơ bản.
@@ -113,7 +219,7 @@ Bước 8 - Phân loại ma trận đề & mức độ năng lực theo Thông t
 
 Bước 9 - Tự động thiết kế Bài tập Bổ trợ Cá nhân hóa tương tự cùng dạng (remedialExercise):
 - Đối với mỗi câu hỏi (đặc biệt câu học sinh bị trừ điểm, có lỗi sai hoặc cần củng cố):
-  + Tự động sáng tạo một bài toán mới HOÀN TOÀN TƯƠNG TỰ CÙNG DẠNG (isomorphic problem) với đề bài gốc, thay đổi số liệu hợp lý, nhắm thẳng vào kỹ năng hoặc lỗi sai mà học sinh vừa mắc phải (ví dụ: nếu sai ở bước tính biệt thức Delta và xét dấu khi nhân âm thì bài bổ trợ phải rèn luyện đúng phép tính Delta và đối chiếu nghiệm; nếu là hình học thì cho bài toán chứng minh tương tự).
+  + Tự động sáng tạo một bài toán mới HOÀN TOÀN TƯƠNG TỰ CÙNG DẠNG (isomorphic problem) với đề bài gốc. Chỉ đổi số liệu/bối cảnh tối thiểu; PHẢI giải được bằng đúng kiến thức và phương pháp đã dùng trong referenceSolution của đề gốc. Không được thêm kiến thức mới hoặc nâng cấp dạng toán. Nhắm thẳng vào kỹ năng/lỗi sai học sinh vừa mắc phải.
   + Thuộc tính remedialExercise:
     * title: Tiêu đề rèn luyện (ví dụ: "Rèn luyện: Biệt thức \\Delta & Định lý Vi-et chứa tham số m")
     * weakness: Lỗ hổng kiến thức chính cần khắc phục ở câu này
@@ -206,6 +312,10 @@ app.post(
       });
     }
 
+    const providedClass = String((req.body as any)?.studentClass || (req.body as any)?.grade || '').trim();
+    const gradeMatch = providedClass.match(/(?:lớp\s*)?([6-9])/i);
+    const providedGrade = gradeMatch ? Number(gradeMatch[1]) : null;
+
     const imageParts = files.map((f) => ({
       inlineData: {
         mimeType: f.mimetype || 'image/jpeg',
@@ -215,14 +325,16 @@ app.post(
 
     const textPart = {
       text: files.length > 1
-        ? `Bài làm học sinh gồm ${files.length} ảnh/trang tương ứng thứ tự pageIndex từ 0 đến ${files.length - 1}. Hãy đọc tất cả các trang ảnh bài làm môn Toán THCS đính kèm theo đúng trình tự. QUAN TRỌNG:
+        ? `Bài làm học sinh gồm ${files.length} ảnh/trang tương ứng thứ tự pageIndex từ 0 đến ${files.length - 1}. ${providedGrade ? `Học sinh đang học LỚP ${providedGrade}; đây là mốc chương trình bắt buộc, không được tự nâng lớp.` : 'Nếu chưa xác định chắc lớp học từ đề, hãy giữ phạm vi kiến thức đúng với chính đề gốc và không suy diễn nâng cao.'} Hãy đọc tất cả các trang ảnh bài làm môn Toán THCS đính kèm theo đúng trình tự. QUAN TRỌNG:
 1. Đọc và chấm ĐẦY ĐỦ TẤT CẢ CÁC DÒNG BIẾN ĐỔI của học sinh (Bước 1, Bước 2, Bước 3, Bước 4, Bước 5...), tuyệt đối không dừng lại ở mỗi Bước 1!
 2. Viết công thức Toán bằng LaTeX chuẩn đẹp: bắt buộc dùng \\frac{tử}{mẫu} cho phân số, \\cdot cho phép nhân, a^{b} cho lũy thừa (ví dụ: \\frac{6^7}{9^2 \\cdot 125}, \\frac{(-3)^{10} \\cdot 15^3}{25^3 \\cdot (-9)^7}). Tuyệt đối không dùng dấu gạch chéo / hay dấu hoa thị *.
-3. Bọc mọi số liệu, công thức trong lời nhận xét bằng dấu $...$ (ví dụ: $125$, $4^2$). Trả về đúng cấu trúc JSON.`
-        : `Hãy đọc ảnh bài làm môn Toán THCS đính kèm. QUAN TRỌNG:
+3. Bọc mọi số liệu, công thức trong lời nhận xét bằng dấu $...$ (ví dụ: $125$, $4^2$).
+4. Nếu là bài hình học có hình vẽ: trước khi chấm phải đọc hình theo Geometry Vision Guard, tách rõ quan hệ chắc chắn (explicitRelations) và quan hệ chưa chắc (uncertainRelations), không suy diễn theo cảm giác thị giác. Trả về đúng cấu trúc JSON.`
+        : `${providedGrade ? `Học sinh đang học LỚP ${providedGrade}; đây là mốc chương trình bắt buộc, không được tự nâng lớp. ` : ''}Hãy đọc ảnh bài làm môn Toán THCS đính kèm. QUAN TRỌNG:
 1. Đọc và chấm ĐẦY ĐỦ TẤT CẢ CÁC DÒNG BIẾN ĐỔI của học sinh (Bước 1, Bước 2, Bước 3, Bước 4, Bước 5...), tuyệt đối không dừng lại ở mỗi Bước 1!
 2. Viết công thức Toán bằng LaTeX chuẩn đẹp: bắt buộc dùng \\frac{tử}{mẫu} cho phân số, \\cdot cho phép nhân, a^{b} cho lũy thừa (ví dụ: \\frac{6^7}{9^2 \\cdot 125}, \\frac{(-3)^{10} \\cdot 15^3}{25^3 \\cdot (-9)^7}). Tuyệt đối không dùng dấu gạch chéo / hay dấu hoa thị *.
-3. Bọc mọi số liệu, công thức trong lời nhận xét bằng dấu $...$ (ví dụ: $125$, $4^2$). Trả về đúng cấu trúc JSON.`,
+3. Bọc mọi số liệu, công thức trong lời nhận xét bằng dấu $...$ (ví dụ: $125$, $4^2$).
+4. Nếu là bài hình học có hình vẽ: trước khi chấm phải đọc hình theo Geometry Vision Guard, tách rõ quan hệ chắc chắn (explicitRelations) và quan hệ chưa chắc (uncertainRelations), không suy diễn theo cảm giác thị giác. Trả về đúng cấu trúc JSON.`,
     };
 
     const responseSchema = {
@@ -251,12 +363,36 @@ app.post(
               },
               problemStatementLatex: { type: Type.STRING, description: 'Đề bài toán dạng LaTeX' },
               level: { type: Type.STRING, description: 'Phân loại mức độ theo Thông tư 22/27 Bộ GD&ĐT: "Nhận biết" | "Thông hiểu" | "Vận dụng" | "Vận dụng cao"' },
-              score: { type: Type.NUMBER, description: 'Điểm câu này đạt được' },
+              scoreBreakdown: {
+                type: Type.ARRAY,
+                description: 'Các Ý/đơn vị kiến thức dùng để chấm điểm; không chia đều theo số dòng bài làm',
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    criterion: { type: Type.STRING, description: 'Ý chấm hoặc năng lực toán học' },
+                    maxPoints: { type: Type.NUMBER, description: 'Điểm tối đa của ý này' },
+                    earnedPoints: { type: Type.NUMBER, description: 'Điểm học sinh đạt ở ý này' },
+                    reason: { type: Type.STRING, description: 'Lý do cho điểm/mất điểm' },
+                  },
+                  required: ['criterion', 'maxPoints', 'earnedPoints', 'reason'],
+                },
+              },
+              score: { type: Type.NUMBER, description: 'Điểm câu này đạt được, phải bằng tổng earnedPoints của scoreBreakdown' },
               maxScore: { type: Type.NUMBER, description: 'Điểm tối đa của câu' },
               max_score: { type: Type.NUMBER, description: 'Điểm tối đa (dự phòng tương thích)' },
               status: { type: Type.STRING, description: 'correct | incorrect | partial | incomplete | unclear' },
               result: { type: Type.STRING, description: 'Kết quả: Đúng, Sai, hoặc Chưa hoàn thiện' },
               feedback: { type: Type.STRING, description: 'Tóm tắt nhận xét nhanh cho câu' },
+              geometryVision: {
+                type: Type.OBJECT,
+                description: 'Dùng cho bài hình học có hình vẽ: bản đọc hình trước khi chấm để tránh suy diễn theo cảm giác',
+                properties: {
+                  visualReadingSummary: { type: Type.STRING, description: 'Tóm tắt ngắn việc đọc hình: đã nhận diện những đối tượng và ký hiệu nào' },
+                  detectedPoints: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Các điểm/tên hình đọc chắc được từ hình hoặc đề' },
+                  explicitRelations: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Các quan hệ được đề bài hoặc ký hiệu hình xác nhận rõ' },
+                  uncertainRelations: { type: Type.ARRAY, items: { type: Type.STRING }, description: 'Các quan hệ chỉ phỏng đoán từ hình dáng hoặc đọc chưa chắc; không được dùng làm dữ kiện chính' },
+                },
+              },
               referenceSolution: {
                 type: Type.OBJECT,
                 description: 'Lớp 1: Đáp án chuẩn do AI tự giải độc lập từ đầu',
@@ -319,7 +455,7 @@ app.post(
                     isIndependentError: { type: Type.BOOLEAN, description: 'true nếu đây là lỗi sai độc lập mới phát sinh' },
                     confidence: { type: Type.NUMBER, description: 'Độ tin cậy từ 0.0 đến 1.0 (ví dụ 0.95)' },
                   },
-                  required: ['stepNumber', 'status', 'studentLatex', 'comment'],
+                  required: ['stepNumber', 'status', 'studentLatex', 'comment', 'confidence'],
                 },
               },
               generalComment: {
@@ -341,10 +477,13 @@ app.post(
                   hint: { type: Type.STRING, description: 'Gợi ý phương pháp giải nhắm thẳng vào lỗi sai' },
                   solutionLatex: { type: Type.STRING, description: 'Lời giải chi tiết từng bước dạng LaTeX' },
                   finalAnswer: { type: Type.STRING, description: 'Đáp số cuối cùng' },
+                  curriculumCheck: { type: Type.STRING, description: 'Xác nhận ngắn rằng bài mới chỉ dùng kiến thức/phương pháp của đề gốc' },
+                  methodAnchor: { type: Type.STRING, description: 'Phương pháp của đề gốc mà bài mới bắt buộc giữ nguyên' },
                 },
+                required: ['title', 'weakness', 'problemLatex', 'hint', 'solutionLatex', 'finalAnswer', 'curriculumCheck', 'methodAnchor'],
               },
             },
-            required: ['questionId', 'score', 'maxScore', 'status', 'result', 'feedback', 'referenceSolution', 'analysis'],
+            required: ['questionId', 'scoreBreakdown', 'score', 'maxScore', 'status', 'result', 'feedback', 'referenceSolution', 'analysis'],
           },
         },
         overall_feedback: {
@@ -364,12 +503,14 @@ app.post(
       required: ['success', 'score', 'summary', 'questions', 'overall_feedback'],
     };
 
-    // Try models with fallback: gemini-3.1-flash-lite -> gemini-flash-latest -> gemini-3.8-flash
-    const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
+    // CHẤM BÀI: chỉ dùng model chất lượng cao. Tuyệt đối không fallback xuống Flash-Lite/model rẻ hơn.
+    // Thứ tự mặc định: Gemini 3.8 -> Pro. Có thể đổi tên model bằng biến môi trường mà không sửa code.
     let lastError: any = null;
     let responseText: string | undefined;
+    let gradingModelUsed: string | undefined;
+    const gradingErrors: Array<{ model: string; kind: string }> = [];
 
-    for (const modelName of candidateModels) {
+    for (const modelName of GRADING_MODELS) {
       try {
         const response = await ai.models.generateContent({
           model: modelName,
@@ -380,20 +521,32 @@ app.post(
             responseSchema,
           },
         });
-        if (response.text) {
+        if (response.text?.trim()) {
           responseText = response.text;
+          gradingModelUsed = modelName;
           break;
         }
+        throw new Error(`Model ${modelName} trả về phản hồi rỗng.`);
       } catch (err: any) {
         lastError = err;
-        console.warn(`Model ${modelName} failed, trying fallback if available:`, err?.message || err);
-        // Delay 500ms before trying fallback model if 503 or 429
-        await new Promise((r) => setTimeout(r, 500));
+        const kind = classifyGeminiError(err);
+        gradingErrors.push({ model: modelName, kind });
+        console.warn(`[GRADING] Model ${modelName} failed (${kind}).`, err?.message || err);
+
+        // Chỉ chuyển sang model chất lượng cao kế tiếp. Không gọi bất kỳ model thấp hơn nào.
+        if (kind === 'quota' || kind === 'overloaded' || kind === 'network' || kind === 'other') {
+          continue;
+        }
+        // API key/quyền truy cập lỗi thường ảnh hưởng mọi model: dừng sớm để tránh gọi thừa.
+        if (kind === 'auth') break;
       }
     }
 
     if (!responseText) {
-      throw lastError || new Error('Không nhận được phản hồi từ AI.');
+      const error: any = lastError || new Error('Không nhận được phản hồi từ model chấm chất lượng cao.');
+      error.isGradingUnavailable = true;
+      error.friendlyMessage = gradingUnavailableMessage(gradingErrors);
+      throw error;
     }
 
     let cleanText = responseText.trim();
@@ -419,6 +572,8 @@ app.post(
 
     if (result.score !== undefined && result.summary) {
       result.success = true;
+      // Hữu ích khi kiểm tra chất lượng/quota; không ảnh hưởng dữ liệu chấm cũ.
+      result.gradingModel = gradingModelUsed;
     }
 
     if (Array.isArray(result.questions)) {
@@ -443,6 +598,23 @@ app.post(
             problemType: 'other',
           };
         }
+        // Nếu frontend đã cung cấp lớp, coi đó là nguồn sự thật để tránh AI tự nhảy khối.
+        if (providedGrade) {
+          q.classification.grade = `Lớp ${providedGrade}`;
+        }
+
+        const geometryQuestion = isGeometryQuestion(q);
+
+        // Curriculum Guard: chỉ giữ bài tự luyện nếu vượt qua kiểm tra phạm vi cục bộ, không gọi thêm API.
+        if (q.remedialExercise) {
+          const guard = validateRemedialExercise(q.remedialExercise, q);
+          if (!guard.ok) {
+            q.remedialExerciseGuard = { passed: false, reason: guard.reason };
+            delete q.remedialExercise;
+          } else {
+            q.remedialExerciseGuard = { passed: true };
+          }
+        }
 
         // Circular 22 Level fallback normalization
         const validLevels = ['Nhận biết', 'Thông hiểu', 'Vận dụng', 'Vận dụng cao'];
@@ -466,7 +638,7 @@ app.post(
 
           q.analysis.forEach((step: any) => {
             if (step.confidence === undefined || step.confidence === null) {
-              step.confidence = 0.95;
+              step.confidence = 0.60;
             }
             if (step.pageIndex === undefined || step.pageIndex === null || step.pageIndex < 0) {
               step.pageIndex = 0;
@@ -485,12 +657,71 @@ app.post(
             }
           });
 
-          // If question has an error but was awarded 100% score, adjust score pedagogically
-          if (hasError && q.score >= q.maxScore) {
-            const ratio = totalSteps > 0 ? (correctSteps / totalSteps) : 0.5;
-            q.score = Math.max(0, Math.round(q.maxScore * ratio * 4) / 4);
-            q.status = q.score > 0 ? 'partial' : 'incorrect';
-            q.result = q.score > 0 ? 'Chưa hoàn thiện' : 'Sai';
+          const stepConfidences = q.analysis
+            .map((step: any) => Number(step.confidence))
+            .filter((v: number) => Number.isFinite(v) && v >= 0 && v <= 1);
+          const minConfidence = stepConfidences.length ? Math.min(...stepConfidences) : 1;
+          const avgConfidence = stepConfidences.length
+            ? stepConfidences.reduce((a: number, b: number) => a + b, 0) / stepConfidences.length
+            : 1;
+          q.confidenceSummary = {
+            minimum: Math.round(minConfidence * 100) / 100,
+            average: Math.round(avgConfidence * 100) / 100,
+            needsTeacherReview: minConfidence < CONFIDENCE_REVIEW_THRESHOLD,
+            shouldNotAutoFinalize: minConfidence < CONFIDENCE_UNCLEAR_THRESHOLD
+          };
+
+          if (geometryQuestion) {
+            const explicitRelations = Array.isArray(q.geometryVision?.explicitRelations) ? q.geometryVision.explicitRelations.filter(Boolean) : [];
+            const uncertainRelations = Array.isArray(q.geometryVision?.uncertainRelations) ? q.geometryVision.uncertainRelations.filter(Boolean) : [];
+            const detectedPoints = Array.isArray(q.geometryVision?.detectedPoints) ? q.geometryVision.detectedPoints.filter(Boolean) : [];
+
+            q.geometryVisionGuard = {
+              active: true,
+              detectedPointCount: detectedPoints.length,
+              explicitRelationCount: explicitRelations.length,
+              uncertainRelationCount: uncertainRelations.length,
+              needsTeacherReview: uncertainRelations.length > 0 || minConfidence < CONFIDENCE_REVIEW_THRESHOLD
+            };
+
+            if (!q.geometryVision) {
+              q.geometryVisionGuard.note = 'AI không trả trường geometryVision; prompt vẫn đã ép đọc hình theo Geometry Vision Guard.';
+            } else if (uncertainRelations.length > 0) {
+              q.feedback = `${q.feedback || ''} [Geometry Vision Guard: có ${uncertainRelations.length} quan hệ trên hình chưa đọc chắc; giáo viên nên đối chiếu trước khi chốt.]`.trim();
+            }
+          }
+          if (minConfidence < CONFIDENCE_UNCLEAR_THRESHOLD) {
+            q.status = 'unclear';
+            q.result = 'Cần giáo viên kiểm tra';
+            q.feedback = `${q.feedback || ''} [Độ tin cậy đọc bài thấp; không nên chốt điểm tự động trước khi giáo viên đối chiếu ảnh gốc.]`.trim();
+            if (q.remedialExercise) {
+              q.remedialExerciseGuard = { passed: false, reason: 'Không tạo bài tự luyện vì dữ liệu đọc bài có confidence dưới 65%.' };
+              delete q.remedialExercise;
+            }
+          } else if (minConfidence < CONFIDENCE_REVIEW_THRESHOLD) {
+            q.feedback = `${q.feedback || ''} [Một số bước có độ tin cậy dưới 85%; giáo viên nên rà soát nhanh trước khi xác nhận.]`.trim();
+          }
+
+          // Chuẩn hóa điểm từ scoreBreakdown theo Ý/đơn vị kiến thức, không chia đều theo số dòng.
+          if (Array.isArray(q.scoreBreakdown) && q.scoreBreakdown.length > 0) {
+            const rubricMax = q.scoreBreakdown.reduce((sum: number, item: any) => sum + Math.max(0, Number(item.maxPoints) || 0), 0);
+            const rubricEarned = q.scoreBreakdown.reduce((sum: number, item: any) => {
+              const maxP = Math.max(0, Number(item.maxPoints) || 0);
+              const earned = Math.min(maxP, Math.max(0, Number(item.earnedPoints) || 0));
+              item.earnedPoints = earned;
+              return sum + earned;
+            }, 0);
+            if (rubricMax > 0) {
+              const targetMax = Number(q.maxScore || q.max_score) || rubricMax;
+              q.score = Math.round((rubricEarned / rubricMax) * targetMax * 100) / 100;
+            }
+          }
+          // Nếu vẫn có mâu thuẫn (có lỗi độc lập nhưng lại đủ điểm), không tự chia điểm theo số bước.
+          // Chỉ đánh dấu trạng thái để giáo viên nhận biết; điểm do rubric/AI quyết định.
+          if (hasError && Number(q.score) >= Number(q.maxScore || q.max_score)) {
+            q.status = 'partial';
+            q.result = 'Cần kiểm tra điểm';
+            q.feedback = `${q.feedback || ''} [Hệ thống phát hiện lỗi nhưng điểm đang tối đa; cần đối chiếu scoreBreakdown.]`.trim();
           }
         }
       });
@@ -518,19 +749,30 @@ app.post(
   } catch (error: any) {
     console.error('Error grading image:', error);
     const errStr = `${error?.message || ''} ${error?.status || ''} ${String(error)}`;
-    let friendlyMessage = error?.message || 'Lỗi xử lý khi chấm bài với AI.';
+    let friendlyMessage = error?.friendlyMessage || error?.message || 'Lỗi xử lý khi chấm bài với AI.';
+    let statusCode = 500;
 
-    if (errStr.includes('RESOURCE_EXHAUSTED') || errStr.includes('429') || errStr.toLowerCase().includes('quota')) {
-      friendlyMessage = 'Hệ thống AI đang nhận nhiều yêu cầu cùng lúc hoặc tạm thời hết lượt giới hạn miễn phí. Vui lòng thử lại sau 15-30 giây.';
-    } else if (errStr.includes('503') || errStr.includes('high demand') || errStr.toLowerCase().includes('overloaded')) {
-      friendlyMessage = 'Mô hình AI đang quá tải trong giây lát. Vui lòng nhấn thử lại sau ít giây.';
-    } else if (errStr.includes('API_KEY') || errStr.includes('API key not valid')) {
-      friendlyMessage = 'GEMINI_API_KEY không hợp lệ hoặc chưa được kích hoạt. Vui lòng kiểm tra lại cấu hình API key.';
+    if (!error?.isGradingUnavailable) {
+      if (errStr.includes('RESOURCE_EXHAUSTED') || errStr.includes('429') || errStr.toLowerCase().includes('quota')) {
+        friendlyMessage = 'Tạm thời chưa thể chấm bài vì model chấm chất lượng cao đã hết lượt/quota. Hệ thống không chuyển sang model thấp hơn để tránh chấm sai.';
+        statusCode = 429;
+      } else if (errStr.includes('503') || errStr.includes('high demand') || errStr.toLowerCase().includes('overloaded')) {
+        friendlyMessage = 'Tạm thời chưa thể chấm bài vì model chấm chất lượng cao đang quá tải. Hệ thống không chuyển sang model thấp hơn để tránh chấm sai.';
+        statusCode = 503;
+      } else if (errStr.includes('API_KEY') || errStr.includes('API key not valid')) {
+        friendlyMessage = 'GEMINI_API_KEY không hợp lệ hoặc chưa được kích hoạt. Vui lòng kiểm tra lại cấu hình API key.';
+      }
+    } else {
+      const kind = classifyGeminiError(error);
+      if (kind === 'quota') statusCode = 429;
+      else if (kind === 'overloaded') statusCode = 503;
     }
 
-    return res.status(500).json({
+    return res.status(statusCode).json({
       success: false,
+      code: error?.isGradingUnavailable ? 'GRADING_HIGH_QUALITY_MODELS_UNAVAILABLE' : 'GRADING_ERROR',
       message: friendlyMessage,
+      retryable: statusCode === 429 || statusCode === 503,
     });
   }
 });
@@ -550,7 +792,10 @@ app.post(['/api/remedial/reroll', '/api/v1/remedial/reroll'], async (req: Reques
       errorComment,
       feedback,
       difficulty = 'standard',
-      currentExerciseTitle
+      currentExerciseTitle,
+      referenceSolution,
+      methodAnchor,
+      studentGrade
     } = req.body || {};
 
     const promptText = `Bạn là chuyên gia sư phạm Toán THCS hàng đầu.
@@ -560,27 +805,34 @@ THÔNG TIN BÀI TOÁN GỐC VÀ HỌC SINH:
 - Câu hỏi số: ${questionId || '1'}
 - Phân loại: Lớp ${classification?.grade || 'THCS'}, Chuyên đề: ${classification?.topic || 'Toán'} - ${classification?.subtopic || ''}
 - Đề bài gốc: ${problemStatementLatex || 'Phương trình / Bài toán tương tự'}
+- Lời giải/phương pháp gốc: ${JSON.stringify(referenceSolution || {})}
+- Method Anchor hiện có: ${methodAnchor || 'Hãy tự rút ra đúng phương pháp từ đề và lời giải gốc'}
+- Khối lớp khóa cứng: ${studentGrade || classification?.grade || 'THCS'}
 - Lỗ hổng kiến thức / Lỗi sai học sinh: ${errorComment || feedback || 'Cần rèn luyện tính toán cẩn thận và nắm chắc công thức'}
 - Yêu cầu độ khó: ${difficulty === 'easier' ? 'Nhẹ hơn một chút để học sinh lấy lại tự tin' : (difficulty === 'harder' ? 'Nâng cao hơn một chút để mở rộng tư duy' : 'Cùng độ khó tương đương')}
 ${currentExerciseTitle ? `- Tránh trùng lặp với bài tập hiện tại: ${currentExerciseTitle}` : ''}
 
 YÊU CẦU ĐẦU RA:
-1. Đề bài mới phải có số liệu đẹp, giải ra kết quả gọn gàng, phù hợp chương trình THCS.
-2. Công thức toán dạng LaTeX chuẩn: dùng \\cdot cho phép nhân, phân số \\frac{a}{b}, căn \\sqrt{x}, bọc trong $...$ hoặc $$...$$.
-3. Gợi ý phương pháp giải hướng thẳng vào lỗi sai học sinh vừa mắc phải.
-4. Lời giải mẫu chi tiết từng bước.`;
+1. Bài mới phải là ISOMORPHIC thật sự: giữ nguyên kiến thức, công thức/định lý cần dùng, phương pháp và kiểu tư duy của bài gốc; chỉ đổi số liệu, tên biến hoặc bối cảnh nhỏ.
+2. TUYỆT ĐỐI không thêm kiến thức mới, không nâng thành bài HSG, không dùng kỹ thuật không cần trong lời giải gốc. Nếu difficulty=harder thì chỉ tăng độ phức tạp số liệu hoặc thêm tối đa một bước CÙNG LOẠI.
+3. Trước khi trả JSON, tự giải bài mới và tự kiểm tra: nếu lời giải cần kiến thức/phương pháp ngoài bài gốc thì bỏ phương án đó và tạo lại NGAY TRONG CÙNG LẦN TRẢ LỜI; không yêu cầu thêm một lượt API để kiểm tra.
+4. methodAnchor phải mô tả chính xác phương pháp của bài gốc được giữ lại; curriculumCheck phải xác nhận rõ không thêm kiến thức mới và đúng khối lớp khóa cứng.
+5. Đề bài mới phải có số liệu đẹp, giải ra kết quả gọn gàng. Công thức toán dạng LaTeX chuẩn: dùng \\cdot cho phép nhân, phân số \\frac{a}{b}, căn \\sqrt{x}.
+6. Gợi ý phương pháp giải hướng thẳng vào lỗi sai học sinh vừa mắc phải. Lời giải mẫu phải chi tiết từng bước.`;
 
     const schema = {
       type: Type.OBJECT,
       properties: {
-        title: { type: Type.STRING, description: 'Tiêu đề rèn luyện (ví dụ: Rèn luyện: Biệt thức \\Delta & Định lý Vi-et)' },
+        title: { type: Type.STRING, description: 'Tiêu đề rèn luyện đúng dạng bài gốc, không tự thêm chuyên đề mới' },
         weakness: { type: Type.STRING, description: 'Lỗ hổng kiến thức trọng tâm' },
         problemLatex: { type: Type.STRING, description: 'Đề bài toán tương tự dạng LaTeX' },
         hint: { type: Type.STRING, description: 'Gợi ý phương pháp giải' },
         solutionLatex: { type: Type.STRING, description: 'Lời giải mẫu chi tiết từng bước' },
-        finalAnswer: { type: Type.STRING, description: 'Đáp số cuối cùng' }
+        finalAnswer: { type: Type.STRING, description: 'Đáp số cuối cùng' },
+        methodAnchor: { type: Type.STRING, description: 'Phương pháp của đề gốc được giữ nguyên' },
+        curriculumCheck: { type: Type.STRING, description: 'Xác nhận bài mới không thêm kiến thức ngoài đề gốc/lớp học' }
       },
-      required: ['title', 'weakness', 'problemLatex', 'hint', 'solutionLatex', 'finalAnswer']
+      required: ['title', 'weakness', 'problemLatex', 'hint', 'solutionLatex', 'finalAnswer', 'methodAnchor', 'curriculumCheck']
     };
 
     const candidateModels = ['gemini-3.1-flash-lite', 'gemini-flash-latest', 'gemini-3.8-flash'];
@@ -610,6 +862,14 @@ YÊU CẦU ĐẦU RA:
 
     let parsed = JSON.parse(respText);
     parsed = sanitizeMathData(parsed);
+    const rerollGuard = validateRemedialExercise(parsed, { problemStatementLatex, referenceSolution, classification });
+    if (!rerollGuard.ok) {
+      return res.status(422).json({
+        success: false,
+        code: 'REMEDIAL_OUT_OF_SCOPE',
+        message: `Bài mới bị Curriculum Guard chặn vì có nguy cơ lệch dạng/phạm vi. ${rerollGuard.reason}`
+      });
+    }
 
     return res.json({
       success: true,
